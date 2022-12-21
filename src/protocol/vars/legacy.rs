@@ -41,34 +41,34 @@ macro_rules! impl_op {
 }
 
 macro_rules! impl_legacy {
-    ($($legacy_name:ident $legacy_ty_max:ident $legacy_ty_flash:ident $legacy_ty_unity:ident); +) => ($(
-        impl Deref for $legacy_name {
-            type Target = $legacy_ty_max;
+    ($($name:ident, $ty_max:ident, $ty_flash:ident, $flash_size:expr, $ty_unity:ident, $unity_size:expr); +) => ($(
+        impl Deref for $name {
+            type Target = $ty_max;
 
             fn deref(&self) -> &Self::Target {
                 &self.0
             }
         }
 
-        impl DerefMut for $legacy_name {
+        impl DerefMut for $name {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.0
             }
         }
 
-        impl Debug for $legacy_name {
+        impl Debug for $name {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)
             }
         }
 
-        impl Display for $legacy_name {
+        impl Display for $name {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)
             }
         }
 
-        impl Neg for $legacy_name {
+        impl Neg for $name {
             type Output = Self;
 
             fn neg(self) -> Self::Output {
@@ -76,7 +76,7 @@ macro_rules! impl_legacy {
             }
         }
 
-        impl Not for $legacy_name {
+        impl Not for $name {
             type Output = Self;
 
             fn not(self) -> Self::Output {
@@ -84,41 +84,41 @@ macro_rules! impl_legacy {
             }
         }
 
-        impl PacketVariable for $legacy_name {
+        impl PacketVariable for $name {
             fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
                 if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    (Self($legacy_ty_unity::from_packet(bytes).0 as $legacy_ty_max), 8)
+                    (Self($ty_unity::from_packet(bytes).0 as $ty_max), 8)
                 } else {
-                    (Self($legacy_ty_flash::from_packet(bytes).0 as $legacy_ty_max), 4)
+                    (Self($ty_flash::from_packet(bytes).0 as $ty_max), 4)
                 }
             }
 
             fn to_packet(&self) -> Vec<u8> {
                 if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    (self.0 as $legacy_ty_unity).to_packet()
+                    (self.0 as $ty_unity).to_packet()
                 } else {
-                    (self.0 as $legacy_ty_flash).to_packet()
+                    (self.0 as $ty_flash).to_packet()
                 }
             }
         }
 
         impl_op! {
-            $legacy_name, $legacy_ty_max =>
-                Add, AddAssign, add, add_assign, | a, b | a + b, $legacy_ty_flash $legacy_ty_unity;
-                BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $legacy_ty_flash $legacy_ty_unity;
-                BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $legacy_ty_flash $legacy_ty_unity;
-                BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $legacy_ty_flash $legacy_ty_unity;
-                Div, DivAssign, div, div_assign, | a, b | a / b, $legacy_ty_flash $legacy_ty_unity;
-                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $legacy_ty_flash $legacy_ty_unity;
-                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $legacy_ty_flash $legacy_ty_unity;
-                Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $legacy_ty_flash $legacy_ty_unity;
-                Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $legacy_ty_flash $legacy_ty_unity;
-                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $legacy_ty_flash $legacy_ty_unity
+            $name, $ty_max =>
+                Add, AddAssign, add, add_assign, | a, b | a + b, $ty_flash $ty_unity;
+                BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $ty_flash $ty_unity;
+                BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $ty_flash $ty_unity;
+                BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $ty_flash $ty_unity;
+                Div, DivAssign, div, div_assign, | a, b | a / b, $ty_flash $ty_unity;
+                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $ty_flash $ty_unity;
+                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $ty_flash $ty_unity;
+                Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $ty_flash $ty_unity;
+                Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $ty_flash $ty_unity;
+                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $ty_flash $ty_unity
         }
     )+)
 }
 
 impl_legacy! {
-    LegacyId i64 i32 i64;
-    LegacyLength i32 i32 i16
+    LegacyId, i64, i32, 4, i64, 8;
+    LegacyLength, i32, i32, 4, i16, 2
 }
