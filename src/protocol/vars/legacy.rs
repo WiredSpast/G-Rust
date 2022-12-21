@@ -41,9 +41,9 @@ macro_rules! impl_op {
 }
 
 macro_rules! impl_legacy {
-    ($($legacy_name:ident $legacy_ty_low:ident $legacy_ty_high:ident); +) => ($(
+    ($($legacy_name:ident $legacy_ty_max:ident $legacy_ty_flash:ident $legacy_ty_unity:ident); +) => ($(
         impl Deref for $legacy_name {
-            type Target = $legacy_ty_high;
+            type Target = $legacy_ty_max;
 
             fn deref(&self) -> &Self::Target {
                 &self.0
@@ -87,38 +87,38 @@ macro_rules! impl_legacy {
         impl PacketVariable for $legacy_name {
             fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
                 if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    (Self($legacy_ty_high::from_packet(bytes).0), 8)
+                    (Self($legacy_ty_unity::from_packet(bytes).0 as $legacy_ty_max), 8)
                 } else {
-                    (Self($legacy_ty_low::from_packet(bytes).0 as $legacy_ty_high), 4)
+                    (Self($legacy_ty_flash::from_packet(bytes).0 as $legacy_ty_max), 4)
                 }
             }
 
             fn to_packet(&self) -> Vec<u8> {
                 if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    self.0.to_packet()
+                    (self.0 as $legacy_ty_unity).to_packet()
                 } else {
-                    (self.0 as $legacy_ty_low).to_packet()
+                    (self.0 as $legacy_ty_flash).to_packet()
                 }
             }
         }
 
         impl_op! {
-            $legacy_name, $legacy_ty_high =>
-                Add, AddAssign, add, add_assign, | a, b | a + b, $legacy_ty_low $legacy_ty_high;
-                BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $legacy_ty_low $legacy_ty_high;
-                BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $legacy_ty_low $legacy_ty_high;
-                BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $legacy_ty_low $legacy_ty_high;
-                Div, DivAssign, div, div_assign, | a, b | a / b, $legacy_ty_low $legacy_ty_high;
-                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $legacy_ty_low $legacy_ty_high;
-                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $legacy_ty_low $legacy_ty_high;
-                Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $legacy_ty_low $legacy_ty_high;
-                Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $legacy_ty_low $legacy_ty_high;
-                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $legacy_ty_low $legacy_ty_high
+            $legacy_name, $legacy_ty_max =>
+                Add, AddAssign, add, add_assign, | a, b | a + b, $legacy_ty_flash $legacy_ty_unity;
+                BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $legacy_ty_flash $legacy_ty_unity;
+                BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $legacy_ty_flash $legacy_ty_unity;
+                BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $legacy_ty_flash $legacy_ty_unity;
+                Div, DivAssign, div, div_assign, | a, b | a / b, $legacy_ty_flash $legacy_ty_unity;
+                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $legacy_ty_flash $legacy_ty_unity;
+                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $legacy_ty_flash $legacy_ty_unity;
+                Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $legacy_ty_flash $legacy_ty_unity;
+                Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $legacy_ty_flash $legacy_ty_unity;
+                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $legacy_ty_flash $legacy_ty_unity
         }
     )+)
 }
 
 impl_legacy! {
-    LegacyId i32 i64;
-    LegacyLength i16 i32
+    LegacyId i64 i32 i64;
+    LegacyLength i32 i32 i16
 }
