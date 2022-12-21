@@ -3,7 +3,7 @@ pub mod extension;
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::vars::legacy::LegacyId;
+    use crate::protocol::vars::legacy::{LegacyId, LegacyLength};
     use crate::protocol::hpacket::HPacket;
     use crate::protocol::vars::longstring::LongString;
 
@@ -76,6 +76,13 @@ mod tests {
     fn read_legacy_int() {
         let mut packet = HPacket::from_bytes(vec![0, 0, 0, 11, 0, 11, 0, 0, 0, 5, 0, 0, 1, 1]);
         let a: LegacyId = packet.read();
+        println!("{a}");
+    }
+
+    #[test]
+    fn read_legacy_length() {
+        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 11, 0, 11, 0, 1, 0, 5, 0, 0, 1, 1]);
+        let a: LegacyLength = packet.read();
         println!("{a}");
     }
 

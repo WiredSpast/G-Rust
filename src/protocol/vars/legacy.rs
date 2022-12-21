@@ -3,7 +3,15 @@ use std::ops::*;
 use crate::protocol::hotel::{Hotel, CUR_HOTEL};
 use super::packetvariable::PacketVariable;
 
+/**
+ * Behaves like an i32 when connected to Flash or Nitro <br>
+ * Behaves like an i64 when connected to Unity
+ */
 pub struct LegacyId(pub i64);
+/**
+ * Behaves like an i32 when connected to Flash or Nitro <br>
+ * Behaves like an i16 when connected to Unity
+ */
 pub struct LegacyLength(pub i32);
 
 macro_rules! impl_op {
