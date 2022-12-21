@@ -3,7 +3,9 @@ pub mod extension;
 
 #[cfg(test)]
 mod tests {
-    use super::protocol::hpacket::HPacket;
+    use crate::protocol::vars::legacy::LegacyId;
+    use crate::protocol::hpacket::HPacket;
+    use crate::protocol::vars::longstring::LongString;
 
     #[test]
     fn packet_read_implicit() {
@@ -59,5 +61,32 @@ mod tests {
         println!("{:?}", packet.read_bytes(3));
         println!("{:?}", packet.read_bytes_at(5, 6));
 
+    }
+
+    #[test]
+    fn legacy_int() {
+        let mut a = LegacyId(9);
+        a += LegacyId(5);
+        a += 2i32;
+        let b = *a;
+        println!("{b}");
+    }
+
+    #[test]
+    fn read_legacy_int() {
+        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 11, 0, 11, 0, 0, 0, 5, 0, 0, 1, 1]);
+        let a: LegacyId = packet.read();
+        println!("{a}");
+    }
+
+    #[test]
+    fn long_string() {
+        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 11, 0, 11, 0, 0, 0, 5, 'a' as u8, 'b' as u8, 'c' as u8, 'd' as u8, 'e' as u8]);
+        let a: LongString = packet.read();
+        println!("{a}");
+        packet.append(LongString::from("abcdefghijklmnopqrstuvwxyz"));
+        println!("{packet:?}");
+        let b: LongString = packet.read();
+        println!("{b}");
     }
 }

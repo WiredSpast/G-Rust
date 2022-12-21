@@ -1,66 +1,5 @@
-use core::mem::size_of;
 use super::hdirection::HDirection;
-
-pub trait FromBytes {
-    fn from_be_bytes_wrapper(bytes: Vec<u8>) -> (Self, usize) where Self: Sized;
-}
-
-pub trait ToBytes {
-    fn to_be_bytes_wrapper(&self) -> Vec<u8>;
-}
-
-fn to_sized_array<T: Clone, const N: usize>(v: Vec<T>) -> [T; N] {
-    v[..N].to_vec().try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
-}
-
-macro_rules! impl_bytes {
-    ($($ty:ident)+) => ($(
-        impl FromBytes for $ty {
-            fn from_be_bytes_wrapper(bytes: Vec<u8>) -> (Self, usize) {
-                let bytes_array: [u8; size_of::<$ty>()] = to_sized_array(bytes);
-                (Self::from_be_bytes(bytes_array), size_of::<$ty>())
-            }
-        }
-
-        impl ToBytes for $ty {
-            fn to_be_bytes_wrapper(&self) -> Vec<u8> {
-                self.to_be_bytes().to_vec()
-            }
-        }
-    )+)
-}
-
-impl_bytes! { u8 i8 u16 i16 u32 i32 u64 i64 u128 i128 /*usize isize*/ f32 f64 }
-
-impl FromBytes for bool {
-    fn from_be_bytes_wrapper(bytes: Vec<u8>) -> (Self, usize) {
-        (bytes[0] != 0, 1)
-    }
-}
-
-impl ToBytes for bool {
-    fn to_be_bytes_wrapper(&self) -> Vec<u8> {
-        if *self { vec ![1] } else { vec![0] }
-    }
-}
-
-impl FromBytes for String {
-    fn from_be_bytes_wrapper(bytes: Vec<u8>) -> (Self, usize) {
-        let s_size = u16::from_be_bytes_wrapper(bytes.clone()).0 as usize;
-        (String::from_utf8(bytes[2..2+s_size].to_vec()).expect("Couldn't read string"), 2+s_size)
-    }
-}
-
-impl ToBytes for String {
-    fn to_be_bytes_wrapper(&self) -> Vec<u8> {
-        let bytes = self.as_bytes();
-        let len = bytes.len() as u16;
-        let mut res = len.to_be_bytes_wrapper();
-        res.extend(bytes);
-        res
-    }
-}
+use super::vars::packetvariable::PacketVariable;
 
 #[derive(Debug, Clone)]
 pub struct HPacket {
@@ -101,14 +40,14 @@ impl HPacket {
 
     pub fn from_header_id(header_id: u16) -> Self {
         let mut res = HPacket::default();
-        res.replace(4, header_id);
+        res.replace::<u16>(4, header_id);
         res.is_edited = false;
         res
     }
 
     pub fn from_header_id_and_bytes(header_id: u16, bytes: Vec<u8>) -> Self {
         let mut res = Self::from_header_id(header_id);
-        // TODO this.append_bytes(bytes);
+        res.append_bytes(bytes);
         res.is_edited = false;
         res
     }
@@ -169,7 +108,7 @@ impl HPacket {
     }
 
     fn fix_length(&mut self) {
-        self.replace_internal(0, self.bytes_length() as i32 - 4);
+        self.replace_internal::<i32>(0, self.bytes_length() as i32 - 4);
     }
 
     pub fn read_bytes(&mut self, length: usize) -> Vec<u8> {
@@ -181,48 +120,77 @@ impl HPacket {
         self.packet_in_bytes[index..index+length].to_vec()
     }
 
-    pub fn read<T: FromBytes>(&mut self) -> T {
+    pub fn read<T: PacketVariable>(&mut self) -> T {
         let bytes = self.packet_in_bytes[self.read_index..].to_vec();
-        let (res, size) = T::from_be_bytes_wrapper(bytes);
+        let (res, size) = T::from_packet(bytes);
         self.read_index += size;
         res
     }
 
-    pub fn read_at<T: FromBytes>(&mut self, index: usize) -> T {
+    pub fn read_at<T: PacketVariable>(&mut self, index: usize) -> T {
         if index >= self.bytes_length() {
             panic!("Read index '{}' out of bounds [0-{}[", index, self.bytes_length());
         }
 
         let bytes = self.packet_in_bytes[index..].to_vec();
-        T::from_be_bytes_wrapper(bytes).0
+        T::from_packet(bytes).0
     }
 
-    pub fn append<T: ToBytes>(&mut self, v: T) {
-        let bytes = v.to_be_bytes_wrapper().to_vec();
+    pub fn append_bytes(&mut self, bytes: Vec<u8>) {
         self.packet_in_bytes.extend(bytes);
         self.is_edited = true;
         self.fix_length();
     }
 
-    fn replace_internal<T: ToBytes + FromBytes>(&mut self, index: usize, v: T) {
-        let old_bytes = self.packet_in_bytes[index..].to_vec();
-        let (_, old_size) = T::from_be_bytes_wrapper(old_bytes.clone());
+    pub fn append<T: PacketVariable>(&mut self, v: T) {
+        let bytes = v.to_packet();
+        self.packet_in_bytes.extend(bytes);
+        self.is_edited = true;
+        self.fix_length();
+    }
+
+    pub fn replace_bytes(&mut self, index: usize, bytes: Vec<u8>) {
         let mut res = self.packet_in_bytes[..index].to_vec();
-        res.extend(v.to_be_bytes_wrapper());
+        res.extend(bytes.clone());
+        res.extend(self.packet_in_bytes[index+bytes.len()..].to_vec());
+        self.packet_in_bytes = res.clone();
+        self.is_edited = true;
+        self.fix_length();
+    }
+
+    fn replace_internal<T: PacketVariable>(&mut self, index: usize, v: T) {
+        let old_bytes = self.packet_in_bytes[index..].to_vec();
+        let (_, old_size) = T::from_packet(old_bytes.clone());
+        let mut res = self.packet_in_bytes[..index].to_vec();
+        res.extend(v.to_packet());
         res.extend(old_bytes[old_size..].to_vec());
         self.packet_in_bytes = res.clone();
     }
 
-    pub fn replace<T: ToBytes + FromBytes>(&mut self, index: usize, v: T) {
+    pub fn replace<T: PacketVariable>(&mut self, index: usize, v: T) {
         self.replace_internal(index, v);
         self.is_edited = true;
         self.fix_length();
     }
 
-    pub fn insert<T: ToBytes>(&mut self, index: usize, v: T) {
+    pub fn insert_bytes(&mut self, index: usize, bytes: Vec<u8>) {
         let mut res = self.packet_in_bytes[..index].to_vec();
-        res.extend(v.to_be_bytes_wrapper());
+        res.extend(bytes);
+        res.extend(self.packet_in_bytes[index..].to_vec());
+        self.packet_in_bytes = res.clone();
+        self.is_edited = true;
+        self.fix_length();
+    }
+
+    pub fn insert<T: PacketVariable>(&mut self, index: usize, v: T) {
+        let mut res = self.packet_in_bytes[..index].to_vec();
+        res.extend(v.to_packet());
         res.extend(self.packet_in_bytes[index..].to_vec());
         self.packet_in_bytes = res.clone();
     }
+
+    pub fn read_3<T: PacketVariable, U: PacketVariable, V: PacketVariable>(&mut self) -> (T, U, V) {
+        return (self.read::<T>(), self.read::<U>(), self.read::<V>());
+    }
 }
+
