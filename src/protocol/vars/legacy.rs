@@ -7,15 +7,17 @@ use super::packetvariable::PacketVariable;
  * Behaves like an i32 when connected to Flash or Nitro <br>
  * Behaves like an i64 when connected to Unity
  */
+#[derive(PartialEq, Eq, Hash, Clone, Default)]
 pub struct LegacyId(pub i64);
 /**
  * Behaves like an i32 when connected to Flash or Nitro <br>
  * Behaves like an i16 when connected to Unity
  */
+#[derive(PartialEq, Eq, Hash, Clone, Default)]
 pub struct LegacyLength(pub i32);
 
 macro_rules! impl_op {
-    ($legacy_name:ident, $legacy_ty:ident => $($op_name:ident, $op_ass_name:ident, $function_name:ident, $function_ass_name:ident, $op:expr, $($ty:ident) +); +) => ($(
+    ($legacy_name:ident, $legacy_ty:ident => $($op_name:ident, $op_ass_name:ident, $function_name:ident, $function_ass_name:ident, $op:expr, $($ty:ident) +); +;) => ($(
         impl $op_name for $legacy_name {
             type Output = Self;
 
@@ -49,7 +51,7 @@ macro_rules! impl_op {
 }
 
 macro_rules! impl_legacy {
-    ($($name:ident, $ty_max:ident, $ty_flash:ident, $flash_size:expr, $ty_unity:ident, $unity_size:expr); +) => ($(
+    ($($name:ident, $ty_max:ident, $ty_flash:ident, $flash_size:expr, $ty_unity:ident, $unity_size:expr); +;) => ($(
         impl Deref for $name {
             type Target = $ty_max;
 
@@ -121,12 +123,12 @@ macro_rules! impl_legacy {
                 Rem, RemAssign, rem, rem_assign, | a, b | a % b, $ty_flash $ty_unity;
                 Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $ty_flash $ty_unity;
                 Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $ty_flash $ty_unity;
-                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $ty_flash $ty_unity
+                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $ty_flash $ty_unity;
         }
     )+)
 }
 
 impl_legacy! {
     LegacyId, i64, i32, 4, i64, 8;
-    LegacyLength, i32, i32, 4, i16, 2
+    LegacyLength, i32, i32, 4, i16, 2;
 }

@@ -188,9 +188,4 @@ impl HPacket {
         res.extend(self.packet_in_bytes[index..].to_vec());
         self.packet_in_bytes = res.clone();
     }
-
-    pub fn read_3<T: PacketVariable, U: PacketVariable, V: PacketVariable>(&mut self) -> (T, U, V) {
-        return (self.read::<T>(), self.read::<U>(), self.read::<V>());
-    }
 }
-
