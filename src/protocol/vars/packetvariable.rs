@@ -146,3 +146,30 @@ impl_packet_tuple_variable! {
     19, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19;
     20, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20;
 }
+
+macro_rules! impl_packet_array_variable {
+    ($($size:expr),+) => ($(
+        impl<T: PacketVariable + Clone> PacketVariable for [T; $size] {
+            fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+                let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+                let mut res: Vec<T> = Vec::new();
+                for _ in 0..$size {
+                    res.push(packet.read());
+                }
+                (to_sized_array::<T, $size>(res), packet.read_index - 6)
+            }
+
+            fn to_packet(&self) -> Vec<u8> {
+                let mut packet = HPacket::from_header_id(0);
+
+                for element in self.iter() {
+                    packet.append(element.clone());
+                }
+
+                packet.get_bytes()[6..].to_vec()
+            }
+        }
+    )+)
+}
+
+impl_packet_array_variable! { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 }

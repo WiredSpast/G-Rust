@@ -169,4 +169,11 @@ mod tests {
         println!("{owners:?}, {items:?}");
         println!("{a}");
     }
+
+    #[test]
+    fn read_array() {
+        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 14, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3]);
+        let nums: [i32; 3] = packet.read();
+        println!("{nums:?}");
+    }
 }
