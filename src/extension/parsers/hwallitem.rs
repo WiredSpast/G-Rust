@@ -54,12 +54,14 @@ impl HWallItem {
         } else {
             packet.append(self.id.to_string());
         }
-        packet.append(self.type_id);
-        packet.append(self.location.clone());
-        packet.append(self.state.clone());
-        packet.append(self.seconds_to_expiration);
-        packet.append(self.usage_policy);
-        packet.append(self.owner_id.clone());
+        packet.append((
+            self.type_id,
+            self.location.clone(),
+            self.state.clone(),
+            self.seconds_to_expiration,
+            self.usage_policy,
+            self.owner_id.clone())
+        );
     }
 
     pub fn parse(packet: &mut HPacket) -> (HashMap<LegacyId, String>, Vec<Self>) {
@@ -68,8 +70,7 @@ impl HWallItem {
 
     pub fn construct_packet(id: u16, owners: HashMap<LegacyId, String>, items: Vec<HWallItem>) -> HPacket {
         let mut packet = HPacket::from_header_id(id);
-        packet.append(owners);
-        packet.append(items);
+        packet.append((owners, items));
         packet
     }
 }

@@ -157,8 +157,7 @@ mod tests {
             (LegacyId(54321), "Kouris".to_string())
         ]);
 
-        packet.append(owners.clone());
-        packet.append(items.clone());
+        packet.append((owners, items));
         println!("{packet:?}");
     }
 

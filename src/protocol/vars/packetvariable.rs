@@ -109,8 +109,8 @@ impl<T: PacketVariable + Clone + Eq + Hash, S: PacketVariable + Clone + Eq + Has
 }
 
 macro_rules! impl_packet_tuple_variable {
-    ($($size:expr, $($ty:ident),+);+;) => ($(
-        impl<$($ty: PacketVariable),+> PacketVariable for ($($ty),+) {
+    ($($size:expr, $($ty:ident:$n:tt),+);+;) => ($(
+        impl<$($ty: PacketVariable + Clone),+> PacketVariable for ($($ty),+) {
             fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
                 let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
                 (($(
@@ -119,32 +119,36 @@ macro_rules! impl_packet_tuple_variable {
             }
 
             fn to_packet(&self) -> Vec<u8> {
-                todo!()
+                let mut packet = HPacket::from_header_id(0);
+                $(
+                    packet.append(self.$n.clone());
+                )+
+                packet.get_bytes()[6..].to_vec()
             }
         }
     )+)
 }
 
 impl_packet_tuple_variable! {
-    2,  T1, T2;
-    3,  T1, T2, T3;
-    4,  T1, T2, T3, T4;
-    5,  T1, T2, T3, T4, T5;
-    6,  T1, T2, T3, T4, T5, T6;
-    7,  T1, T2, T3, T4, T5, T6, T7;
-    8,  T1, T2, T3, T4, T5, T6, T7, T8;
-    9,  T1, T2, T3, T4, T5, T6, T7, T8, T9;
-    10, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10;
-    11, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11;
-    12, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12;
-    13, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13;
-    14, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14;
-    15, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15;
-    16, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16;
-    17, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17;
-    18, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18;
-    19, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19;
-    20, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20;
+    2,  T0:0, T1:1;
+    3,  T0:0, T1:1, T2:2;
+    4,  T0:0, T1:1, T2:2, T3:3;
+    5,  T0:0, T1:1, T2:2, T3:3, T4:4;
+    6,  T0:0, T1:1, T2:2, T3:3, T4:4, T5:5;
+    7,  T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6;
+    8,  T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7;
+    9,  T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8;
+    10, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9;
+    11, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10;
+    12, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11;
+    13, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12;
+    14, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13;
+    15, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14;
+    16, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15;
+    17, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15, T16:16;
+    18, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15, T16:16, T17:17;
+    19, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15, T16:16, T17:17, T18:18;
+    20, T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15, T16:16, T17:17, T18:18, T19:19;
 }
 
 macro_rules! impl_packet_array_variable {
