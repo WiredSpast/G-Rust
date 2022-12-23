@@ -188,4 +188,8 @@ impl HPacket {
         res.extend(self.packet_in_bytes[index..].to_vec());
         self.packet_in_bytes = res.clone();
     }
+
+    pub fn stringify(&self) -> String {
+        if self.is_edited { "0" } else { "1" }.to_string() + &*String::from_utf8(self.get_bytes()).unwrap()
+    }
 }

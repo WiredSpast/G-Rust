@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate packetvar_derive;
+
 pub mod protocol;
 pub mod extension;
 
@@ -8,6 +11,7 @@ mod tests {
     use crate::protocol::vars::legacy::{LegacyId, LegacyLength};
     use crate::protocol::hpacket::HPacket;
     use crate::protocol::vars::longstring::LongString;
+    use crate::extension::parsers::hfriend::HFriend;
 
     #[test]
     fn packet_read_implicit() {
@@ -174,5 +178,15 @@ mod tests {
         let mut packet = HPacket::from_bytes(vec![0, 0, 0, 14, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3]);
         let nums: [i32; 3] = packet.read();
         println!("{nums:?}");
+    }
+
+    #[test]
+    fn derive_packet_variable_struct() {
+        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 14, 0, 0, 0, 0, 0, 1, 0, 2, 'a' as u8, 'b' as u8, 0, 0, 0, 2, 1, 0, 0, 2, 'f' as u8, 'g' as u8, 0, 0, 0, 5, 0, 3, 'm' as u8, 't' as u8, 't' as u8, 0, 4, 'n' as u8, 'a' as u8, 'm' as u8, 'e' as u8, 0, 2, 'f' as u8, 'b' as u8, 1, 0, 1, 0, 5]);
+        let a: HFriend = packet.read();
+        println!("{a:?}");
+        let mut reconstructed_packet = HPacket::from_header_id(0);
+        reconstructed_packet.append(a);
+        println!("{reconstructed_packet:?}");
     }
 }
