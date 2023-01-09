@@ -7,14 +7,21 @@ use super::packetvariable::PacketVariable;
  * Behaves like an i32 when connected to Flash or Nitro <br>
  * Behaves like an i64 when connected to Unity
  */
-#[derive(PartialEq, Eq, Hash, Clone, Default)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub struct LegacyId(pub i64);
 /**
  * Behaves like an i32 when connected to Flash or Nitro <br>
  * Behaves like an i16 when connected to Unity
  */
-#[derive(PartialEq, Eq, Hash, Clone, Default)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub struct LegacyLength(pub i32);
+/**
+ * Always behaves like an i64 <br>
+ * Reads a string and parses it to i64 when connected to Flash or Nitro <br>
+ * Reads an i64 when connected to Unity
+ */
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
+pub struct LegacyStringId(pub i64);
 
 macro_rules! impl_op {
     ($legacy_name:ident, $legacy_ty:ident => $($op_name:ident, $op_ass_name:ident, $function_name:ident, $function_ass_name:ident, $op:expr, $($ty:ident) +); +;) => ($(
@@ -51,7 +58,7 @@ macro_rules! impl_op {
 }
 
 macro_rules! impl_legacy {
-    ($($name:ident, $ty_max:ident, $ty_flash:ident, $flash_size:expr, $ty_unity:ident, $unity_size:expr); +;) => ($(
+    ($($name:ident, $ty_max:ident, $ty_flash:ident, $ty_unity:ident); +;) => ($(
         impl Deref for $name {
             type Target = $ty_max;
 
@@ -94,24 +101,6 @@ macro_rules! impl_legacy {
             }
         }
 
-        impl PacketVariable for $name {
-            fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
-                if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    (Self($ty_unity::from_packet(bytes).0 as $ty_max), 8)
-                } else {
-                    (Self($ty_flash::from_packet(bytes).0 as $ty_max), 4)
-                }
-            }
-
-            fn to_packet(&self) -> Vec<u8> {
-                if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-                    (self.0 as $ty_unity).to_packet()
-                } else {
-                    (self.0 as $ty_flash).to_packet()
-                }
-            }
-        }
-
         impl_op! {
             $name, $ty_max =>
                 Add, AddAssign, add, add_assign, | a, b | a + b, $ty_flash $ty_unity;
@@ -129,6 +118,108 @@ macro_rules! impl_legacy {
 }
 
 impl_legacy! {
-    LegacyId, i64, i32, 4, i64, 8;
-    LegacyLength, i32, i32, 4, i16, 2;
+    LegacyId, i64, i32, i64;
+    LegacyLength, i32, i32, i16;
+    LegacyStringId, i64, i32, i64;
+}
+
+impl PacketVariable for LegacyId {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (Self(i64::from_packet(bytes).0), 8)
+        } else {
+            (Self(i32::from_packet(bytes).0 as i64), 4)
+        }
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (self.0).to_packet()
+        } else {
+            (self.0 as i32).to_packet()
+        }
+    }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            i64::can_read(bytes)
+        } else {
+            i32::can_read(bytes)
+        }
+    }
+
+    fn read_size(_bytes: Vec<u8>) -> usize {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            8
+        } else {
+            4
+        }
+    }
+}
+
+impl PacketVariable for LegacyLength {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (Self(i16::from_packet(bytes).0 as i32), 8)
+        } else {
+            (Self(i32::from_packet(bytes).0), 4)
+        }
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (self.0 as i16).to_packet()
+        } else {
+            (self.0).to_packet()
+        }
+    }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            i16::can_read(bytes)
+        } else {
+            i32::can_read(bytes)
+        }
+    }
+
+    fn read_size(_bytes: Vec<u8>) -> usize {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            2
+        } else {
+            4
+        }
+    }
+}
+
+impl PacketVariable for LegacyStringId {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (Self(i64::from_packet(bytes).0), 8)
+        } else {
+            let (s, size) = String::from_packet(bytes);
+            (Self(s.parse::<i64>().unwrap()), size)
+        }
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            (self.0).to_packet()
+        } else {
+            let res = (self.0.to_string()).to_packet();
+            println!("{res:?}");
+            res
+        }
+    }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        bytes.len() >= Self::read_size(bytes)
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+            8
+        } else {
+            String::read_size(bytes)
+        }
+    }
 }

@@ -23,6 +23,18 @@ impl PacketVariable for LongString {
         res.extend(bytes);
         res
     }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        Self::read_size(bytes) != 0
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        if bytes.len() < 4 {
+            0
+        } else {
+            4 + u32::from_packet(bytes.clone()).0 as usize
+        }
+    }
 }
 
 impl Deref for LongString {

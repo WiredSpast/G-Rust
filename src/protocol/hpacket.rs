@@ -1,3 +1,6 @@
+use std::any::type_name;
+use encoding::all::ISO_8859_1;
+use encoding::{DecoderTrap, EncoderTrap, Encoding};
 use super::hdirection::HDirection;
 use super::vars::packetvariable::PacketVariable;
 
@@ -59,7 +62,13 @@ impl HPacket {
         res
     }
 
-    // TODO from_string
+    // TODO test from_string
+    pub fn from_string(s: String) -> HPacket {
+        let mut res = HPacket::default();
+        res.is_edited = s.bytes().nth(0).unwrap() == '1' as u8;
+        res.packet_in_bytes = ISO_8859_1.encode(&s[1..], EncoderTrap::Ignore).unwrap();
+        res
+    }
 
     pub fn eof(&self) -> i8 {
         if self.read_index < self.packet_in_bytes.len() { 0 }
@@ -122,18 +131,21 @@ impl HPacket {
 
     pub fn read<T: PacketVariable>(&mut self) -> T {
         let bytes = self.packet_in_bytes[self.read_index..].to_vec();
-        let (res, size) = T::from_packet(bytes);
+        if !T::can_read(bytes.clone()) {
+            panic!("Can't read {} from packet, read index out of bounds", type_name::<T>());
+        }
+        let (res, size) = T::from_packet(bytes.clone());
         self.read_index += size;
         res
     }
 
     pub fn read_at<T: PacketVariable>(&mut self, index: usize) -> T {
-        if index >= self.bytes_length() {
-            panic!("Read index '{}' out of bounds [0-{}[", index, self.bytes_length());
-        }
 
         let bytes = self.packet_in_bytes[index..].to_vec();
-        T::from_packet(bytes).0
+        if !T::can_read(bytes.clone()) {
+            panic!("Can't read {} from packet, read index out of bounds", type_name::<T>());
+        }
+        T::from_packet(bytes.clone()).0
     }
 
     pub fn append_bytes(&mut self, bytes: Vec<u8>) {
@@ -190,6 +202,6 @@ impl HPacket {
     }
 
     pub fn stringify(&self) -> String {
-        if self.is_edited { "0" } else { "1" }.to_string() + &*String::from_utf8(self.get_bytes()).unwrap()
+        if self.is_edited { "0" } else { "1" }.to_string() + &*ISO_8859_1.decode(&self.packet_in_bytes[..], DecoderTrap::Ignore).unwrap()
     }
 }

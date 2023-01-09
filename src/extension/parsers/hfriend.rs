@@ -1,8 +1,9 @@
 use crate::protocol::hpacket::HPacket;
 use crate::protocol::vars::legacy::LegacyId;
 use crate::protocol::vars::packetvariable::PacketVariable;
+use super::baseparser::BaseParser;
 
-#[derive(Debug, PacketVariable)]
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 pub struct HFriend {
     id: LegacyId,
     name: String,
@@ -18,10 +19,4 @@ pub struct HFriend {
     vip_member: bool,
     pocket_habbo_user: bool,
     relationship_status: i16
-}
-
-impl HFriend {
-    fn new(packet: &mut HPacket) -> Self {
-        packet.read()
-    }
 }

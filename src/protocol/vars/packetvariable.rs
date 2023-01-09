@@ -1,17 +1,25 @@
 use core::mem::size_of;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::Debug;
 use std::hash::Hash;
 use crate::protocol::hpacket::HPacket;
-use crate::protocol::vars::legacy::LegacyLength;
+use crate::protocol::vars::legacy::{LegacyId, LegacyLength};
 
 pub trait PacketVariable {
+    /// Reads a variable from the beginning of the given bytes vector
+    ///
+    /// # Arguments
+    ///
+    ///
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized;
     fn to_packet(&self) -> Vec<u8>;
+    fn can_read(bytes: Vec<u8>) -> bool;
+    fn read_size(bytes: Vec<u8>) -> usize;
 }
 
-fn to_sized_array<T: Clone, const N: usize>(v: Vec<T>) -> [T; N] {
-    v[..N].to_vec().try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
+fn to_sized_array<T: Clone + Debug, const N: usize>(v: Vec<T>) -> [T; N] {
+    v[..N].to_vec().try_into().expect("Not enough byte lefts to read")
 }
 
 macro_rules! impl_packet_variable {
@@ -22,9 +30,16 @@ macro_rules! impl_packet_variable {
                 (Self::from_be_bytes(bytes_array), size_of::<$ty>())
             }
 
-
             fn to_packet(&self) -> Vec<u8> {
                 self.to_be_bytes().to_vec()
+            }
+
+            fn can_read(bytes: Vec<u8>) -> bool {
+                bytes.len() >= size_of::<$ty>()
+            }
+
+            fn read_size(bytes: Vec<u8>) -> usize {
+                size_of::<$ty>()
             }
         }
     )+)
@@ -40,12 +55,21 @@ impl PacketVariable for bool {
     fn to_packet(&self) -> Vec<u8> {
         if *self { vec![1] } else { vec![0] }
     }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        bytes.len() >= 1
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        1
+    }
 }
 
 impl PacketVariable for String {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) {
         let s_size = u16::from_packet(bytes.clone()).0 as usize;
-        (String::from_utf8(bytes[2..2+s_size].to_vec()).expect("Couldn't read string"), 2+s_size)
+        let s = String::from_utf8(bytes[2..2+s_size].to_vec()).expect("Couldn't read string");
+        (s, 2+s_size)
     }
 
     fn to_packet(&self) -> Vec<u8> {
@@ -54,6 +78,18 @@ impl PacketVariable for String {
         let mut res = len.to_packet();
         res.extend(bytes);
         res
+    }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        Self::read_size(bytes) >= 2
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        if bytes.len() < 2 {
+            0
+        } else {
+            2 + u16::from_packet(bytes.clone()).0 as usize
+        }
     }
 }
 
@@ -80,12 +116,34 @@ impl<T: PacketVariable + Clone> PacketVariable for Vec<T> {
 
         packet.get_bytes()[6..].to_vec()
     }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        Self::read_size(bytes) != 0
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        let mut size = LegacyLength::read_size(bytes.clone());
+        return if bytes.len() < size {
+            0
+        } else {
+            let count = LegacyLength::from_packet(bytes.clone()).0;
+            for _ in 0..*count {
+                let remaining = bytes[size..].to_vec();
+                if !T::can_read(remaining.clone()) {
+                    return 0;
+                } else {
+                    size += T::read_size(remaining.clone());
+                }
+            }
+            size
+        }
+    }
 }
 
-impl<T: PacketVariable + Clone + Eq + Hash, S: PacketVariable + Clone + Eq + Hash> PacketVariable for HashMap<T, S> {
+impl<K: PacketVariable + Clone + Eq + Hash, V: PacketVariable + Clone + Eq + Hash> PacketVariable for HashMap<K, V> {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
         let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
-        let mut res: HashMap<T, S> = HashMap::new();
+        let mut res: HashMap<K, V> = HashMap::new();
 
         let len: LegacyLength = packet.read();
         for _ in 0..*len {
@@ -106,6 +164,34 @@ impl<T: PacketVariable + Clone + Eq + Hash, S: PacketVariable + Clone + Eq + Has
 
         packet.get_bytes()[6..].to_vec()
     }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        Self::read_size(bytes) != 0
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        let mut size = LegacyLength::read_size(bytes.clone());
+        return if bytes.len() < size {
+            0
+        } else {
+            let count = LegacyLength::from_packet(bytes.clone()).0;
+            for _ in 0..*count {
+                let mut remaining = bytes[size..].to_vec();
+                if !K::can_read(remaining.clone()) {
+                    return 0;
+                } else {
+                    size += K::read_size(remaining.clone());
+                }
+                remaining = bytes[size..].to_vec();
+                if !V::can_read(remaining.clone()) {
+                    return 0;
+                } else {
+                    size += V::read_size(remaining.clone());
+                }
+            }
+            size
+        }
+    }
 }
 
 macro_rules! impl_packet_tuple_variable {
@@ -124,6 +210,25 @@ macro_rules! impl_packet_tuple_variable {
                     packet.append(self.$n.clone());
                 )+
                 packet.get_bytes()[6..].to_vec()
+            }
+
+            fn can_read(bytes: Vec<u8>) -> bool {
+                Self::read_size(bytes) != 0
+            }
+
+            fn read_size(bytes: Vec<u8>) -> usize {
+                let mut size = 0;
+                $(
+                    {
+                        let remaining = bytes[size..].to_vec();
+                        if !$ty::can_read(remaining.clone()) {
+                            println!("{size}");
+                            return 0;
+                        }
+                        size += $ty::read_size(remaining.clone());
+                    }
+                )+
+                size
             }
         }
     )+)
@@ -153,7 +258,7 @@ impl_packet_tuple_variable! {
 
 macro_rules! impl_packet_array_variable {
     ($($size:expr),+) => ($(
-        impl<T: PacketVariable + Clone> PacketVariable for [T; $size] {
+        impl<T: PacketVariable + Clone + Debug> PacketVariable for [T; $size] {
             fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
                 let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
                 let mut res: Vec<T> = Vec::new();
@@ -172,8 +277,56 @@ macro_rules! impl_packet_array_variable {
 
                 packet.get_bytes()[6..].to_vec()
             }
+
+            fn can_read(bytes: Vec<u8>) -> bool {
+                Self::read_size(bytes) != 0
+            }
+
+            fn read_size(bytes: Vec<u8>) -> usize {
+                let mut size = 0;
+                for _ in 0..$size {
+                    let remaining = bytes[size..].to_vec();
+                    if !T::can_read(remaining.clone()) {
+                        return 0;
+                    }
+                    size += T::read_size(remaining.clone());
+                }
+                size
+            }
         }
     )+)
 }
 
 impl_packet_array_variable! { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 }
+
+impl<T: PacketVariable> PacketVariable for Option<T> {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+
+        return if T::can_read(bytes.clone()) {
+            let (val, size) = T::from_packet(bytes);
+            (Some(val), size)
+        } else {
+            (None, 0)
+        }
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if self.is_some() {
+            self.as_ref().unwrap().to_packet()
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn read_size(bytes: Vec<u8>) -> usize {
+        if T::can_read(bytes.clone()) {
+            T::read_size(bytes.clone())
+        } else {
+            0
+        }
+    }
+
+    fn can_read(bytes: Vec<u8>) -> bool {
+        true
+    }
+}

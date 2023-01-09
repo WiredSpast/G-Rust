@@ -1,5 +1,5 @@
 [workspace]
-members = ["packetvar-derive"]
+members = ["packetvar-derive", "parser-derive"]
 
 [package]
 name = "g-rust"
@@ -8,4 +8,6 @@ edition = "2021"
 
 [dependencies]
 once_cell = "1.16.0"
-packetvar-derive = { version = "0.1.0", path = "packetvar-derive" }
+encoding = "0.2.33"
+packetvar-derive = { path = "packetvar-derive" }
+parser-derive = { path = "parser-derive" }
