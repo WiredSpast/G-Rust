@@ -139,22 +139,6 @@ impl PacketVariable for LegacyId {
             (self.0 as i32).to_packet()
         }
     }
-
-    fn can_read(bytes: Vec<u8>) -> bool {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-            i64::can_read(bytes)
-        } else {
-            i32::can_read(bytes)
-        }
-    }
-
-    fn read_size(_bytes: Vec<u8>) -> usize {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-            8
-        } else {
-            4
-        }
-    }
 }
 
 impl PacketVariable for LegacyLength {
@@ -171,22 +155,6 @@ impl PacketVariable for LegacyLength {
             (self.0 as i16).to_packet()
         } else {
             (self.0).to_packet()
-        }
-    }
-
-    fn can_read(bytes: Vec<u8>) -> bool {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-            i16::can_read(bytes)
-        } else {
-            i32::can_read(bytes)
-        }
-    }
-
-    fn read_size(_bytes: Vec<u8>) -> usize {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-            2
-        } else {
-            4
         }
     }
 }
@@ -208,18 +176,6 @@ impl PacketVariable for LegacyStringId {
             let res = (self.0.to_string()).to_packet();
             println!("{res:?}");
             res
-        }
-    }
-
-    fn can_read(bytes: Vec<u8>) -> bool {
-        bytes.len() >= Self::read_size(bytes)
-    }
-
-    fn read_size(bytes: Vec<u8>) -> usize {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
-            8
-        } else {
-            String::read_size(bytes)
         }
     }
 }

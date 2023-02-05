@@ -5,6 +5,7 @@ extern crate parser_derive;
 
 pub mod protocol;
 pub mod extension;
+pub mod misc;
 
 #[cfg(test)]
 mod tests {
@@ -15,28 +16,6 @@ mod tests {
     use crate::protocol::vars::longstring::LongString;
     use crate::extension::parsers::hfriend::HFriend;
     use crate::extension::parsers::baseparser::BaseParser;
-
-    #[test]
-    fn packet_read_implicit() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 81, 0, 152, 1, 1, 1, 0, 1, 2, 1, 2, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 0, 3, 'a' as u8, 'b' as u8, 'c' as u8, 123]);
-        let a: u8 = packet.read();
-        let b: i8 = packet.read();
-        let c: bool = packet.read();
-        let d: bool = packet.read();
-        let e: u16 = packet.read();
-        let f: i16 = packet.read();
-        let g: u32 = packet.read();
-        let h: i32 = packet.read();
-        let i: u64 = packet.read();
-        let j: i64 = packet.read();
-        let k: u128 = packet.read();
-        let l: i128 = packet.read();
-        let m: f32 = packet.read();
-        let n: f64 = packet.read();
-        let o: String = packet.read();
-        println!("{a}, {b}, {c}, {d}, {e}, {f}, {g}, {h}, {i}, {j}, {k}, {l}, {m}, {n}, {o}");
-        println!("{}", packet.read::<u8>());
-    }
 
     #[test]
     fn packet_append() {

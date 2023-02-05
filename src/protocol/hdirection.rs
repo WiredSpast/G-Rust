@@ -1,9 +1,7 @@
 use std::convert::Infallible;
 use std::str::FromStr;
-use std::string::ParseError;
-use crate::protocol::hmessage::HMessage;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HDirection {
     ToClient,
     ToServer,
@@ -27,5 +25,15 @@ impl FromStr for HDirection {
                 _ => HDirection::None
             }
         )
+    }
+}
+
+impl ToString for HDirection {
+    fn to_string(&self) -> String {
+        match self {
+            HDirection::ToClient => "TOCLIENT".to_string(),
+            HDirection::ToServer => "TOSERVER".to_string(),
+            HDirection::None => "NONE".to_string()
+        }
     }
 }

@@ -1,10 +1,9 @@
-use std::any::type_name;
 use encoding::all::ISO_8859_1;
 use encoding::{DecoderTrap, EncoderTrap, Encoding};
 use super::hdirection::HDirection;
 use super::vars::packetvariable::PacketVariable;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HPacket {
     is_edited: bool,
     packet_in_bytes: Vec<u8>,
@@ -41,14 +40,14 @@ impl HPacket {
         res
     }
 
-    pub fn from_header_id(header_id: u16) -> Self {
+    pub fn from_header_id(header_id: i16) -> Self {
         let mut res = HPacket::default();
-        res.replace::<u16>(4, header_id);
+        res.replace::<i16>(4, header_id);
         res.is_edited = false;
         res
     }
 
-    pub fn from_header_id_and_bytes(header_id: u16, bytes: Vec<u8>) -> Self {
+    pub fn from_header_id_and_bytes(header_id: i16, bytes: Vec<u8>) -> Self {
         let mut res = Self::from_header_id(header_id);
         res.append_bytes(bytes);
         res.is_edited = false;
@@ -131,20 +130,13 @@ impl HPacket {
 
     pub fn read<T: PacketVariable>(&mut self) -> T {
         let bytes = self.packet_in_bytes[self.read_index..].to_vec();
-        if !T::can_read(bytes.clone()) {
-            panic!("Can't read {} from packet, read index out of bounds", type_name::<T>());
-        }
         let (res, size) = T::from_packet(bytes.clone());
         self.read_index += size;
         res
     }
 
     pub fn read_at<T: PacketVariable>(&mut self, index: usize) -> T {
-
         let bytes = self.packet_in_bytes[index..].to_vec();
-        if !T::can_read(bytes.clone()) {
-            panic!("Can't read {} from packet, read index out of bounds", type_name::<T>());
-        }
         T::from_packet(bytes.clone()).0
     }
 
