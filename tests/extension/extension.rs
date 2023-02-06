@@ -20,6 +20,8 @@ fn testtt() {
 
 #[test]
 fn test_connection() {
-    let ext = Extension::new_custom_args(vec!["-p".to_string(), "9092".to_string()]);
+    let mut ext = Extension::new();
+    ext.args = vec!["-p".to_string(), "9092".to_string()];
+    ext.info.name = "G-Rust test";
     ext.run();
 }

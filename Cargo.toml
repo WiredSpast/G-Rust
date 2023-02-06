@@ -5,6 +5,8 @@ members = ["packetvar-derive", "parser-derive"]
 name = "g-rust"
 version = "0.1.0"
 edition = "2021"
+authors = ["WiredSpast"]
+description = "A Rust framework for G-Earth extensions"
 
 [dependencies]
 once_cell = "1.16.0"

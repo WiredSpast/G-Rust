@@ -1,10 +1,6 @@
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::{env, ptr, thread};
-use std::borrow::{Borrow, BorrowMut};
-use std::collections::hash_map::RandomState;
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::net::TcpStream;
+use std::{env, thread};
 use crate::misc::hostinfo::HostInfo;
 use crate::protocol::hpacket::HPacket;
 use crate::protocol::vars::packetvariable::PacketVariable;
@@ -39,9 +35,29 @@ const FILE_FLAG: [&str; 2] = ["--filename", "-f"];
 const COOKIE_FLAG: [&str; 2] = ["--auth-token", "-c"];
 
 #[derive(Debug, Clone)]
+pub struct ExtensionInfo {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub author: &'static str,
+    pub version: &'static str
+}
+
+impl ExtensionInfo {
+    fn read_from_cargo() -> Self {
+        ExtensionInfo {
+            name: env!("CARGO_PKG_NAME"),
+            description: env!("CARGO_PKG_DESCRIPTION"),
+            author: env!("CARGO_PKG_AUTHORS"),
+            version: env!("CARGO_PKG_VERSION")
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Extension {
+    pub info: ExtensionInfo,
     connection: Option<GEarthConnection>,
-    args: Vec<String>,
+    pub args: Vec<String>,
 
     delayed_init: bool,
     host_info: Option<HostInfo>,
@@ -51,18 +67,9 @@ pub struct Extension {
 impl Extension {
     pub fn new() -> Self {
         Extension {
+            info: ExtensionInfo::read_from_cargo(),
             connection: None,
             args: env::args().collect(),
-
-            delayed_init: false,
-            host_info: None
-        }
-    }
-
-    pub fn new_custom_args(args: Vec<String>) -> Self {
-        Extension {
-            connection: None,
-            args,
 
             delayed_init: false,
             host_info: None
@@ -116,7 +123,18 @@ impl Extension {
         // let file = self.get_argument(FILE_FLAG);
         // let cookie = self.get_argument(COOKIE_FLAG);
         let mut response = HPacket::from_header_id(OutgoingMessageIds::EXTENSION_INFO);
-        response.append((String::from("Rust test"), String::from("WiredSpast"), String::from("0.1"), String::from("Connection test"), false, false, String::from(""), String::from(""), true, true));
+        response.append((
+            String::from(self.info.name),
+            String::from(self.info.author),
+            String::from(self.info.version),
+            String::from(self.info.description),
+            false,
+            false,
+            String::from(""),
+            String::from(""),
+            true,
+            true
+        ));
         self.connection.unwrap().write(response.get_bytes());
     }
 
@@ -175,6 +193,5 @@ impl GEarthConnection {
 
     pub fn write(mut self, bytes: Vec<u8>) {
         self.socket.write(&bytes[..]).expect("Couldn't write to socket");
-        // self.socket.flush().expect("Couldn't flush socket");
     }
 }
