@@ -6,6 +6,7 @@ extern crate parser_derive;
 pub mod protocol;
 pub mod extension;
 pub mod misc;
+pub mod services;
 
 #[cfg(test)]
 mod tests {

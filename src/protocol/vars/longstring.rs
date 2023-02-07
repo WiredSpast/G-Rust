@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Deref, DerefMut};
 use crate::protocol::vars::packetvariable::PacketVariable;
 
-pub struct LongString(String);
+pub struct LongString(pub String);
 
 impl LongString {
     pub fn from(s: &str) -> LongString {

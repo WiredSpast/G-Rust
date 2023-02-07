@@ -1,9 +1,17 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::{env, thread};
+use std::fmt::Error;
+use crate::extension::consoleformat::ConsoleColour;
+use crate::misc::connectioninfo::ConnectionInfo;
 use crate::misc::hostinfo::HostInfo;
+use crate::misc::hclient::CUR_CLIENT;
+use crate::protocol::hdirection::HDirection;
+use crate::protocol::hmessage::HMessage;
 use crate::protocol::hpacket::HPacket;
+use crate::protocol::vars::longstring::LongString;
 use crate::protocol::vars::packetvariable::PacketVariable;
+use crate::services::packetinfo::packetinfomanager::PacketInfoManager;
 
 struct IncomingMessageIds;
 impl IncomingMessageIds {
@@ -56,12 +64,22 @@ impl ExtensionInfo {
 #[derive(Debug, Clone)]
 pub struct Extension {
     pub info: ExtensionInfo,
-    connection: Option<GEarthConnection>,
     pub args: Vec<String>,
+    connection: Option<GEarthConnection>,
+    packet_info_manager: Option<PacketInfoManager>,
 
     delayed_init: bool,
     host_info: Option<HostInfo>,
-    // incomingMessageListeners: Map<>,
+
+    on_init: Vec<fn()>,
+    on_connect: Vec<fn(ConnectionInfo)>,
+    on_start: Vec<fn()>,
+    on_end: Vec<fn()>,
+    on_click: Vec<fn()>,
+    on_host_info_update: Vec<fn(HostInfo)>,
+    on_socket_disconnect: Vec<fn()>,
+
+    flag_callback: Option<fn(Vec<String>)>
 }
 
 impl Extension {
@@ -70,13 +88,24 @@ impl Extension {
             info: ExtensionInfo::read_from_cargo(),
             connection: None,
             args: env::args().collect(),
+            packet_info_manager: None,
 
             delayed_init: false,
-            host_info: None
+            host_info: None,
+
+            on_init: Vec::new(),
+            on_connect: Vec::new(),
+            on_start: Vec::new(),
+            on_end: Vec::new(),
+            on_click: Vec::new(),
+            on_host_info_update: Vec::new(),
+            on_socket_disconnect: Vec::new(),
+
+            flag_callback: None
         }
     }
 
-    fn get_argument(self, flags: [&str; 2]) -> String {
+    fn get_argument(&self, flags: [&str; 2]) -> String {
         for i in 0..self.args.len() - 1 {
             for flag in flags {
                 if self.args[i].to_lowercase() == flag.to_lowercase() {
@@ -89,11 +118,12 @@ impl Extension {
     }
 
     pub fn run(mut self) {
-        println!("b");
         self.connection = Some(GEarthConnection::new(self.clone().get_argument(PORT_FLAG)));
         let read_handle = thread::spawn(move || {
-            self.read_loop();
-            println!("Socket closed");
+            self.clone().read_loop();
+            for listener in self.on_socket_disconnect.iter() {
+                (listener)();
+            }
         });
 
         read_handle.join().unwrap();
@@ -101,67 +131,185 @@ impl Extension {
 
     fn read_loop(self) {
         loop {
-            let mut bytes = self.clone().connection.unwrap().read(4);
-            let length = i32::from_packet(bytes.clone()).0;
-            bytes.append(&mut self.clone().connection.unwrap().read(length as u64));
+            let length_bytes: Result<Vec<u8>, Error> = self.clone().connection.unwrap().read(4);
+            if length_bytes.is_err() {
+                break;
+            }
+            let length = i32::from_packet(length_bytes.clone().unwrap()).0;
+            let body_bytes: Result<Vec<u8>, Error> = self.clone().connection.unwrap().read(length as u64);
+            if body_bytes.is_err() {
+                break;
+            }
+            let mut bytes = length_bytes.unwrap();
+            bytes.append(&mut body_bytes.unwrap());
             self.clone().on_g_packet(HPacket::from_bytes(bytes));
         }
     }
 
-    fn on_g_packet(self, mut packet: HPacket) {
+    fn on_g_packet(mut self, mut packet: HPacket) {
         match packet.header_id() {
-            IncomingMessageIds::INFO_REQUEST => self.on_info_request(),
-            IncomingMessageIds::CONNECTION_START => self.on_connection_start(packet),
-            IncomingMessageIds::CONNECTION_END => self.on_connection_end(),
-            IncomingMessageIds::FLAGS_CHECK => self.on_flags_check(packet),
-            IncomingMessageIds::INIT => self.on_init(packet),
+            IncomingMessageIds::INFO_REQUEST => self.on_info_request_packet(),
+            IncomingMessageIds::CONNECTION_START => self.on_connection_start_packet(packet),
+            IncomingMessageIds::CONNECTION_END => self.on_connection_end_packet(),
+            IncomingMessageIds::FLAGS_CHECK => self.on_flags_check_packet(packet),
+            IncomingMessageIds::INIT => self.on_init_packet(packet),
+            IncomingMessageIds::ON_DOUBLE_CLICK => self.on_double_click_packet(),
+            IncomingMessageIds::PACKET_INTERCEPT => self.on_packet_intercept_packet(packet),
+            IncomingMessageIds::UPDATE_HOST_INFO => self.on_update_host_info_packet(packet),
             _ => println!("Unknown incoming message")
         }
     }
 
-    fn on_info_request(mut self) {
-        // let file = self.get_argument(FILE_FLAG);
-        // let cookie = self.get_argument(COOKIE_FLAG);
+    fn on_info_request_packet(&mut self) {
+        let file = self.get_argument(FILE_FLAG);
+        let cookie = self.get_argument(COOKIE_FLAG);
         let mut response = HPacket::from_header_id(OutgoingMessageIds::EXTENSION_INFO);
         response.append((
             String::from(self.info.name),
             String::from(self.info.author),
             String::from(self.info.version),
             String::from(self.info.description),
-            false,
-            false,
-            String::from(""),
-            String::from(""),
-            true,
-            true
+            !self.on_click.is_empty(), // onclick
+            file != "", // file == null
+            String::from(file), // file
+            String::from(cookie), // cookie
+            true, // can leave
+            true // can delete
         ));
-        self.connection.unwrap().write(response.get_bytes());
+        self.clone().connection.unwrap().write(response.get_bytes());
     }
 
-    fn on_connection_start(self, mut packet: HPacket) {
-        let (host, connection_port, hotel_version, client_identifier, client): (String, i32, String, String, String) = packet.read();
-        // TODO packetInfoManager
+    fn on_connection_start_packet(mut self, mut packet: HPacket) {
+        let connection_info: ConnectionInfo = packet.read();
+        self.packet_info_manager = packet.read();
+        *CUR_CLIENT.lock().unwrap() = connection_info.client.clone();
 
+        if self.delayed_init {
+            for listener in self.on_init.iter() {
+                (listener)();
+            }
+            self.delayed_init = false;
+        }
+
+        for listener in self.on_connect.iter() {
+            (listener)(connection_info.clone());
+        }
+        for listener in self.on_start.iter() {
+            (listener)();
+        }
     }
 
-    fn on_connection_end(self) {
-        // todo
+    fn on_connection_end_packet(self) {
+        for listener in self.on_end.iter() {
+            (listener)();
+        }
     }
 
-    fn on_flags_check(self, mut packet: HPacket) {
-        // todo handle flag request callback
+    fn on_flags_check_packet(mut self, mut packet: HPacket) {
+        if self.flag_callback.is_some() {
+            let count: i32 = packet.read();
+            let mut flags: Vec<String> = Vec::new();
+            for _ in 0..count {
+                flags.push(packet.read());
+            }
+            (self.flag_callback.unwrap())(flags);
+        }
+        self.flag_callback = None;
     }
 
-    fn on_init(mut self, mut packet: HPacket) {
+    fn on_init_packet(&mut self, mut packet: HPacket) {
         (self.delayed_init, self.host_info) = packet.read();
-        self.write_to_console("Abcdef".to_string());
+        for listener in self.on_host_info_update.iter() {
+            (listener)(self.clone().host_info.unwrap());
+        }
+        if !self.delayed_init {
+            for listener in self.on_init.iter() {
+                (listener)();
+            }
+        }
+
+        self.clone().connection.unwrap().write_to_console_formatted(format!("Extension \"{}\" successfully initialized", self.info.name), ConsoleColour::Green);
     }
 
-    fn write_to_console(self, s: String) {
-        let mut packet = HPacket::from_header_id(OutgoingMessageIds::EXTENSION_CONSOLE_LOG);
-        packet.append(format!("[black] {s}"));
-        self.connection.unwrap().write(packet.get_bytes());
+    fn on_double_click_packet(self) {
+        for listener in self.on_click.iter() {
+            (listener)();
+        }
     }
+
+    fn on_packet_intercept_packet(self, mut packet: HPacket) {
+        let string_message: LongString = packet.read();
+        let h_message = HMessage::from_string(string_message.clone());
+
+        // todo modify_message
+
+        let mut response_packet = HPacket::from_header_id(OutgoingMessageIds::MANIPULATED_PACKET);
+        response_packet.append(LongString(h_message.stringify()));
+
+        self.connection.unwrap().write(response_packet.get_bytes());
+    }
+
+    fn on_update_host_info_packet(mut self, mut packet: HPacket) {
+        self.host_info = packet.read();
+        for listener in self.on_host_info_update.iter() {
+            (listener)(self.clone().host_info.unwrap());
+        }
+    }
+
+    pub fn write_to_console(self, s: String) {
+        self.connection.expect("Extension not connected yet...").write_to_console(format!("[{}] {s}", self.info.name));
+    }
+
+    pub fn write_to_console_formatted(self, s: String, colour: ConsoleColour) {
+        self.connection.expect("Extension not connected yet...").write_to_console_formatted(format!("[{}] {s}", self.info.name), colour);
+    }
+
+    pub fn on_init(&mut self, listener: fn()) {
+        self.on_init.push(listener);
+    }
+
+    pub fn on_socket_disconnect(&mut self, listener: fn()) {
+        self.on_socket_disconnect.push(listener);
+    }
+
+    pub fn on_connect(&mut self, listener: fn(ConnectionInfo)) {
+        self.on_connect.push(listener);
+    }
+
+    pub fn on_start(&mut self, listener: fn()) {
+        self.on_start.push(listener);
+    }
+
+    pub fn on_end(&mut self, listener: fn()) {
+        self.on_end.push(listener);
+    }
+
+    pub fn on_host_info_update(&mut self, listener: fn(host_info: HostInfo)) {
+        self.on_host_info_update.push(listener);
+    }
+
+    pub fn on_click(&mut self, listener: fn()) {
+        self.on_click.push(listener);
+    }
+
+    // pub fn send_to_client(self, packet: HPacket) -> bool {
+    //
+    // }
+    //
+    // fn send(packet: HPacket, direction: HDirection) -> bool {
+    //     if packet.is_corrupted() {
+    //         return false;
+    //     }
+    //
+    //     if !packet.is_complete() {
+    //         // todo complete
+    //     }
+    //     if !packet.is_complete() {
+    //         return false;
+    //     }
+    //
+    //
+    // }
 }
 
 #[derive(Debug)]
@@ -187,11 +335,26 @@ impl GEarthConnection {
         }
     }
 
-    pub fn read(self, length: u64) -> Vec<u8> {
-        self.socket.take(length).bytes().map(|r| r.unwrap()).collect()
+    pub fn read(self, length: u64) -> Result<Vec<u8>, Error> {
+        let bytes: Vec<u8> = self.socket.take(length).bytes().filter(| r | r.is_ok()).map(|r| r.unwrap()).collect();
+        if bytes.len() == length as usize {
+            Ok(bytes)
+        } else {
+            Err(Error)
+        }
     }
 
     pub fn write(mut self, bytes: Vec<u8>) {
         self.socket.write(&bytes[..]).expect("Couldn't write to socket");
+    }
+
+    pub fn write_to_console(self, s: String) {
+        self.write_to_console_formatted(s, ConsoleColour::Caret)
+    }
+
+    pub fn write_to_console_formatted(self, s: String, colour: ConsoleColour) {
+        let mut packet = HPacket::from_header_id(OutgoingMessageIds::EXTENSION_CONSOLE_LOG);
+        packet.append(format!("[{colour}] {s}"));
+        self.write(packet.get_bytes());
     }
 }

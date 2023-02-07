@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::*;
-use crate::protocol::hotel::{Hotel, CUR_HOTEL};
+use crate::misc::hclient::{HClient, CUR_CLIENT};
 use super::packetvariable::PacketVariable;
 
 /**
@@ -125,7 +125,7 @@ impl_legacy! {
 
 impl PacketVariable for LegacyId {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (Self(i64::from_packet(bytes).0), 8)
         } else {
             (Self(i32::from_packet(bytes).0 as i64), 4)
@@ -133,7 +133,7 @@ impl PacketVariable for LegacyId {
     }
 
     fn to_packet(&self) -> Vec<u8> {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (self.0).to_packet()
         } else {
             (self.0 as i32).to_packet()
@@ -143,7 +143,7 @@ impl PacketVariable for LegacyId {
 
 impl PacketVariable for LegacyLength {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (Self(i16::from_packet(bytes).0 as i32), 8)
         } else {
             (Self(i32::from_packet(bytes).0), 4)
@@ -151,7 +151,7 @@ impl PacketVariable for LegacyLength {
     }
 
     fn to_packet(&self) -> Vec<u8> {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (self.0 as i16).to_packet()
         } else {
             (self.0).to_packet()
@@ -161,7 +161,7 @@ impl PacketVariable for LegacyLength {
 
 impl PacketVariable for LegacyStringId {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (Self(i64::from_packet(bytes).0), 8)
         } else {
             let (s, size) = String::from_packet(bytes);
@@ -170,7 +170,7 @@ impl PacketVariable for LegacyStringId {
     }
 
     fn to_packet(&self) -> Vec<u8> {
-        if *CUR_HOTEL.lock().unwrap() == Hotel::Unity {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
             (self.0).to_packet()
         } else {
             let res = (self.0.to_string()).to_packet();

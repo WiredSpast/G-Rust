@@ -1,5 +1,6 @@
 use std::convert::Infallible;
 use std::str::FromStr;
+use crate::protocol::vars::packetvariable::PacketVariable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HDirection {
@@ -35,5 +36,18 @@ impl ToString for HDirection {
             HDirection::ToServer => "TOSERVER".to_string(),
             HDirection::None => "NONE".to_string()
         }
+    }
+}
+
+impl PacketVariable for HDirection {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        (
+            if bool::from_packet(bytes).0 { HDirection::ToServer } else { HDirection::ToClient },
+            1
+        )
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        (self == &HDirection::ToServer).to_packet()
     }
 }
