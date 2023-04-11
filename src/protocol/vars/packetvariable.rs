@@ -87,7 +87,7 @@ impl<T: PacketVariable + Clone> PacketVariable for Vec<T> {
     }
 }
 
-impl<K: PacketVariable + Clone + Eq + Hash, V: PacketVariable + Clone + Eq + Hash> PacketVariable for HashMap<K, V> {
+impl<K: PacketVariable + Clone + Eq + Hash, V: PacketVariable + Clone> PacketVariable for HashMap<K, V> {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
         let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
         let mut res: HashMap<K, V> = HashMap::new();
