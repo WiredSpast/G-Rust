@@ -113,16 +113,31 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_packet_info_from_header_id(mut self, direction: HDirection, header_id: i32) -> Option<PacketInfo> {
-        self.get_all_packet_info_from_header_id(direction, header_id).pop()
+    pub fn get_packet_info_from_header_id(self, direction: HDirection, header_id: i32) -> Option<PacketInfo> {
+        let all = self.get_all_packet_info_from_header_id(direction, header_id);
+        if all.is_empty() {
+            None
+        } else {
+            Some(all[0].clone())
+        }
     }
 
-    pub fn get_packet_info_from_hash(mut self, direction: HDirection, hash: String) -> Option<PacketInfo> {
-        self.get_all_packet_info_from_hash(direction, hash).pop()
+    pub fn get_packet_info_from_hash(self, direction: HDirection, hash: String) -> Option<PacketInfo> {
+        let all = self.get_all_packet_info_from_hash(direction, hash);
+        if all.is_empty() {
+            None
+        } else {
+            Some(all[0].clone())
+        }
     }
 
-    pub fn get_packet_info_from_name(mut self, direction: HDirection, name: String) -> Option<PacketInfo> {
-        self.get_all_packet_info_from_name(direction, name).pop()
+    pub fn get_packet_info_from_name(self, direction: HDirection, name: String) -> Option<PacketInfo> {
+        let all = self.get_all_packet_info_from_hash(direction, name);
+        if all.is_empty() {
+            None
+        } else {
+            Some(all[0].clone())
+        }
     }
 
     pub fn get_packet_info_list(self) -> Vec<PacketInfo> {
