@@ -9,12 +9,14 @@ use super::packetvariable::PacketVariable;
  */
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub struct LegacyId(pub i64);
+
 /**
  * Behaves like an i32 when connected to Flash or Nitro <br>
  * Behaves like an i16 when connected to Unity
  */
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub struct LegacyLength(pub i32);
+
 /**
  * Always behaves like an i64 <br>
  * Reads a string and parses it to i64 when connected to Flash or Nitro <br>
@@ -22,6 +24,14 @@ pub struct LegacyLength(pub i32);
  */
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub struct LegacyStringId(pub i64);
+
+/**
+ * Always behaves like an f64 <br>
+ * Reads a string and parses it to f64 when connected to Flash or Nitro <br>
+ * Reads an f64 when connected to Unity
+ */
+#[derive(PartialEq, Clone, Copy, Default)]
+pub struct LegacyDouble(pub f64);
 
 macro_rules! impl_op {
     ($legacy_name:ident, $legacy_ty:ident => $($op_name:ident, $op_ass_name:ident, $function_name:ident, $function_ass_name:ident, $op:expr, $($ty:ident) +); +;) => ($(
@@ -93,6 +103,19 @@ macro_rules! impl_legacy {
             }
         }
 
+        impl_op! {
+            $name, $ty_max =>
+                Add, AddAssign, add, add_assign, | a, b | a + b, $ty_flash $ty_unity;
+                Div, DivAssign, div, div_assign, | a, b | a / b, $ty_flash $ty_unity;
+                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $ty_flash $ty_unity;
+                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $ty_flash $ty_unity;
+                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $ty_flash $ty_unity;
+        }
+    )+)
+}
+
+macro_rules! impl_legacy_bitwise {
+    ($($name:ident, $ty_max:ident, $ty_flash:ident, $ty_unity:ident); +;) => ($(
         impl Not for $name {
             type Output = Self;
 
@@ -103,21 +126,23 @@ macro_rules! impl_legacy {
 
         impl_op! {
             $name, $ty_max =>
-                Add, AddAssign, add, add_assign, | a, b | a + b, $ty_flash $ty_unity;
-                BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $ty_flash $ty_unity;
-                BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $ty_flash $ty_unity;
-                BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $ty_flash $ty_unity;
-                Div, DivAssign, div, div_assign, | a, b | a / b, $ty_flash $ty_unity;
-                Mul, MulAssign, mul, mul_assign, | a, b | a * b, $ty_flash $ty_unity;
-                Rem, RemAssign, rem, rem_assign, | a, b | a % b, $ty_flash $ty_unity;
-                Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $ty_flash $ty_unity;
-                Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $ty_flash $ty_unity;
-                Sub, SubAssign, sub, sub_assign, | a, b | a - b, $ty_flash $ty_unity;
+               BitAnd, BitAndAssign, bitand, bitand_assign, | a, b | a & b, $ty_flash $ty_unity;
+               BitOr, BitOrAssign, bitor, bitor_assign, | a, b | a | b, $ty_flash $ty_unity;
+               BitXor, BitXorAssign, bitxor, bitxor_assign, | a, b | a ^ b, $ty_flash $ty_unity;
+               Shl, ShlAssign, shl, shl_assign, | a, b | a << b, $ty_flash $ty_unity;
+               Shr, ShrAssign, shr, shr_assign, | a, b | a >> b, $ty_flash $ty_unity;
         }
     )+)
 }
 
 impl_legacy! {
+    LegacyId, i64, i32, i64;
+    LegacyLength, i32, i32, i16;
+    LegacyStringId, i64, i32, i64;
+    LegacyDouble, f64, f32, f64;
+}
+
+impl_legacy_bitwise! {
     LegacyId, i64, i32, i64;
     LegacyLength, i32, i32, i16;
     LegacyStringId, i64, i32, i64;
@@ -174,7 +199,26 @@ impl PacketVariable for LegacyStringId {
             (self.0).to_packet()
         } else {
             let res = (self.0.to_string()).to_packet();
-            println!("{res:?}");
+            res
+        }
+    }
+}
+
+impl PacketVariable for LegacyDouble {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
+            (Self(f64::from_packet(bytes).0), 8)
+        } else {
+            let (s, size) = String::from_packet(bytes);
+            (Self(s.parse::<f64>().unwrap()), size)
+        }
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if *CUR_CLIENT.lock().unwrap() == HClient::Unity {
+            (self.0).to_packet()
+        } else {
+            let res = (self.0.to_string()).to_packet();
             res
         }
     }

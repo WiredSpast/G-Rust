@@ -9,6 +9,16 @@ pub enum HDirection {
     None
 }
 
+impl Into<u8> for HDirection {
+    fn into(self) -> u8 {
+        match self {
+            HDirection::ToClient => 0,
+            HDirection::ToServer => 1,
+            HDirection::None => 2
+        }
+    }
+}
+
 impl Default for HDirection {
     fn default() -> Self {
         HDirection::None
