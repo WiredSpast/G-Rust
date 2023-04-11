@@ -11,11 +11,9 @@ pub mod services;
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use crate::extension::parsers::hwallitem::{HWallItem, HWallItems};
     use crate::protocol::vars::legacy::{LegacyId, LegacyLength, LegacyStringId};
     use crate::protocol::hpacket::HPacket;
     use crate::protocol::vars::longstring::LongString;
-    use crate::extension::parsers::hfriend::HFriend;
     use crate::extension::parsers::baseparser::BaseParser;
 
     #[test]
@@ -87,97 +85,10 @@ mod tests {
     }
 
     #[test]
-    fn hwallitem_append() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 2, 0, 85]);
-        packet.append(HWallItem {
-            id: LegacyStringId(12534),
-            type_id: 254,
-            location: ":w=4,9 l=30,57 l".to_string(),
-            state: "".to_string(),
-            seconds_to_expiration: 5,
-            usage_policy: 3,
-            owner_id: LegacyId(12435)
-        });
-        println!("{packet:?}");
-    }
-
-    #[test]
-    fn hwallitem_read() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 45, 0, 85, 0, 5, 49, 50, 53, 51, 52, 0, 0, 0, 254, 0, 16, 58, 119, 61, 52, 44, 57, 32, 108, 61, 51, 48, 44, 53, 55, 32, 108, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 48, 147]);
-        let item: HWallItem = packet.read();
-        println!("{item:?}");
-        println!("{} / {}", packet.read_index, packet.bytes_length());
-    }
-
-    #[test]
-    fn hwallitem_parse() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 53, 0, 85, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 49, 50, 53, 51, 52, 0, 0, 0, 254, 0, 16, 58, 119, 61, 52, 44, 57, 32, 108, 61, 51, 48, 44, 53, 55, 32, 108, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 48, 147]);
-        let HWallItems{owners, items} = packet.read();
-        println!("{items:?}, {owners:?}");
-    }
-
-    #[test]
-    fn hwallitem_append_items() {
-        let mut packet = HPacket::from_header_id(8);
-        let items = vec![
-            HWallItem {
-                id: LegacyStringId(12534),
-                type_id: 254,
-                location: ":w=4,9 l=30,57 l".to_string(),
-                state: "".to_string(),
-                seconds_to_expiration: 5,
-                usage_policy: 3,
-                owner_id: LegacyId(12435)
-            },
-            HWallItem {
-                id: LegacyStringId(45243),
-                type_id: 524,
-                location: ":w=9,4 l=15,74 r".to_string(),
-                state: "1".to_string(),
-                seconds_to_expiration: -1,
-                usage_policy: 0,
-                owner_id: LegacyId(54321)
-            }
-        ];
-        let owners: HashMap<LegacyId, String> = HashMap::from([
-            (LegacyId(12435), "WiredSpast".to_string()),
-            (LegacyId(54321), "Kouris".to_string())
-        ]);
-
-        packet.append((owners, items));
-        println!("{packet:?}");
-    }
-
-    #[test]
-    fn hwallitem_read_items() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 125, 0, 8, 0, 0, 0, 2, 0, 0, 212, 49, 0, 6, 75, 111, 117, 114, 105, 115, 0, 0, 48, 147, 0, 10, 87, 105, 114, 101, 100, 83, 112, 97, 115, 116, 0, 0, 0, 2, 0, 5, 49, 50, 53, 51, 52, 0, 0, 0, 254, 0, 16, 58, 119, 61, 52, 44, 57, 32, 108, 61, 51, 48, 44, 53, 55, 32, 108, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 48, 147, 0, 5, 52, 53, 50, 52, 51, 0, 0, 2, 12, 0, 16, 58, 119, 61, 57, 44, 52, 32, 108, 61, 49, 53, 44, 55, 52, 32, 114, 0, 1, 49, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 212, 49]);
-        let (owners, items, a): (HashMap<LegacyId, String>, Vec<HWallItem>, i32) = packet.read();
-        println!("{owners:?}, {items:?}");
-        println!("{a}");
-    }
-
-    #[test]
     fn read_array() {
         let mut packet = HPacket::from_bytes(vec![0, 0, 0, 14, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3]);
         let nums: [i32; 3] = packet.read();
         println!("{nums:?}");
-    }
-
-    #[test]
-    fn derive_packet_variable_struct() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 14, 0, 0, 0, 0, 0, 1, 0, 2, 'a' as u8, 'b' as u8, 0, 0, 0, 2, 1, 0, 0, 2, 'f' as u8, 'g' as u8, 0, 0, 0, 5, 0, 3, 'm' as u8, 't' as u8, 't' as u8, 0, 4, 'n' as u8, 'a' as u8, 'm' as u8, 'e' as u8, 0, 2, 'f' as u8, 'b' as u8, 1, 0, 1, 0, 5]);
-        let a: HFriend = packet.read();
-        println!("{a:?}");
-        let mut reconstructed_packet = HPacket::from_header_id(0);
-        reconstructed_packet.append(a);
-        println!("{reconstructed_packet:?}");
-    }
-
-    #[test]
-    fn base_parser() {
-        let mut packet = HPacket::from_bytes(vec![0, 0, 0, 45, 0, 85, 0, 5, 49, 50, 53, 51, 52, 0, 0, 0, 254, 0, 16, 58, 119, 61, 52, 44, 57, 32, 108, 61, 51, 48, 44, 53, 55, 32, 108, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 48, 147]);
-        let a = HWallItem::parse(&mut packet);
-        println!("{a:?}");
     }
 
     #[test]

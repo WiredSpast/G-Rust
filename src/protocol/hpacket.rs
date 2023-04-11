@@ -1,5 +1,6 @@
 use encoding::all::ISO_8859_1;
 use encoding::{DecoderTrap, EncoderTrap, Encoding};
+use crate::services::packetinfo::packetinfomanager::PacketInfoManager;
 use super::hdirection::HDirection;
 use super::vars::packetvariable::PacketVariable;
 
@@ -75,7 +76,17 @@ impl HPacket {
         else { 1 }
     }
 
-    // TODO can_complete
+    pub(crate) fn can_complete(mut self, manager: PacketInfoManager) -> bool {
+        if self.is_corrupted() || self.identifier == "" || self.identifier_direction == HDirection::None {
+            return false;
+        }
+
+        let packet_info = manager.clone()
+            .get_packet_info_from_name(self.identifier_direction.clone(), self.identifier.clone())
+            .or(manager.get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
+
+        return packet_info.is_some();
+    }
 
     pub fn can_send_to_client(&self) -> bool {
         self.identifier_direction == HDirection::ToClient
@@ -85,7 +96,21 @@ impl HPacket {
         self.identifier_direction == HDirection::ToServer
     }
 
-    // TODO complete_packet
+    pub(crate) fn complete_packet(mut self, manager: PacketInfoManager) {
+        if self.is_corrupted() || self.identifier == "" || self.identifier_direction == HDirection::None {
+            return;
+        }
+
+        let packet_info = manager.clone()
+            .get_packet_info_from_name(self.identifier_direction.clone(), self.identifier.clone())
+            .or(manager.get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
+
+        if packet_info.is_none() {
+            return;
+        }
+
+        self.replace(4, packet_info.unwrap().header_id as u16);
+    }
 
     pub fn is_complete(&self) -> bool {
         self.identifier == ""
