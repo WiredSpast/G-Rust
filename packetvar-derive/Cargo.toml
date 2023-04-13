@@ -2,6 +2,10 @@
 name = "packetvar-derive"
 version = "0.1.0"
 edition = "2021"
+authors = ["WiredSpast"]
+description = "A Rust framework for G-Earth extensions"
+license = "MIT"
+repository = "https://github.com/WiredSpast/G-Rust/"
 
 [lib]
 proc-macro = true
