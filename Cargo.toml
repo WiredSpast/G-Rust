@@ -1,5 +1,5 @@
 [workspace]
-members = ["packetvar-derive", "parser-derive"]
+members = ["packetvar-derive", "parser-derive", "examples\\basic-extension"]
 
 [package]
 name = "g-rust"
