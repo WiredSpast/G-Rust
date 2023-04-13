@@ -260,7 +260,7 @@ impl Extension {
         } else { Vec::new() };
 
         let mut matching_listeners_by_id: Vec<Box<dyn Fn(&mut Extension, &mut HMessage)>> = Vec::new();
-        let mut header_id = msg.get_packet().header_id();
+        let header_id = msg.get_packet().header_id();
         let intercepts_by_id = self.intercepts_by_id.get_mut(&msg.get_destination());
         if intercepts_by_id.is_some() {
             for (id, listeners) in intercepts_by_id.unwrap() {
@@ -290,12 +290,6 @@ impl Extension {
         for listener in matching_listeners_by_name {
             (listener)(self, msg);
             self.intercept_raw(msg.get_destination(), name.clone(), listener);
-        }
-    }
-
-    fn clone_listener(listener: &Box<dyn Fn(&mut Extension, &mut HMessage) -> ()>) -> impl Fn(&mut Extension, &mut HMessage) -> () + '_ {
-        move | ext: &mut Extension, msg: &mut HMessage | {
-            (listener)(ext, msg);
         }
     }
 
