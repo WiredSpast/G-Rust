@@ -16,5 +16,5 @@ keywords = ["habbo", "G-Earth"]
 once_cell = "1.16.0"
 encoding = "0.2.33"
 miniz_oxide = "0.7.1"
-packetvar-derive = { path = "packetvar-derive", version = "0.1.0" }
-parser-derive = { path = "parser-derive", version = "0.1.0" }
+packetvar-derive = { path = "./packetvar-derive", version = "0.1.0" }
+parser-derive = { path = "./parser-derive", version = "0.1.0" }
