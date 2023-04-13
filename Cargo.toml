@@ -7,10 +7,14 @@ version = "0.0.1-beta.1"
 edition = "2021"
 authors = ["WiredSpast"]
 description = "A Rust framework for G-Earth extensions"
+license = "MIT"
+repository = "https://github.com/WiredSpast/G-Rust/"
+readme = "README.md"
+keywords = ["habbo", "G-Earth"]
 
 [dependencies]
 once_cell = "1.16.0"
 encoding = "0.2.33"
 miniz_oxide = "0.7.1"
-packetvar-derive = { path = "packetvar-derive" }
-parser-derive = { path = "parser-derive" }
+packetvar-derive = { path = "packetvar-derive", version = "0.1.0" }
+parser-derive = { path = "parser-derive", version = "0.1.0" }
