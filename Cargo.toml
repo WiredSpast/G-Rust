@@ -3,7 +3,7 @@ members = ["packetvar-derive", "parser-derive"]
 
 [package]
 name = "g-rust"
-version = "0.0.1-beta.1"
+version = "0.0.1-beta.2"
 edition = "2021"
 authors = ["WiredSpast"]
 description = "A Rust framework for G-Earth extensions"

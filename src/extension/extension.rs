@@ -7,7 +7,6 @@ use crate::misc::connectioninfo::ConnectionInfo;
 use crate::misc::consoleformat::ConsoleColour;
 use crate::misc::hclient::CUR_CLIENT;
 use crate::misc::hostinfo::HostInfo;
-// use crate::misc::intercept::InterceptListener;
 use crate::misc::messages::*;
 use crate::protocol::hdirection::HDirection;
 use crate::protocol::hmessage::HMessage;
@@ -30,19 +29,19 @@ const COOKIE_FLAG: [&str; 2] = ["--auth-token", "-c"];
 
 #[derive(Debug, Clone)]
 pub struct ExtensionInfo {
-    pub name: &'static str,
-    pub description: &'static str,
-    pub author: &'static str,
-    pub version: &'static str
+    pub name: String,
+    pub description: String,
+    pub author: String,
+    pub version: String
 }
 
 impl ExtensionInfo {
     fn read_from_cargo() -> Self {
         ExtensionInfo {
-            name: env!("CARGO_PKG_NAME"),
-            description: env!("CARGO_PKG_DESCRIPTION"),
-            author: env!("CARGO_PKG_AUTHORS"),
-            version: env!("CARGO_PKG_VERSION")
+            name: env::var("CARGO_PKG_NAME").expect("Package name not defined in cargo.toml, required for G-Rust extensions"),
+            description: env::var("CARGO_PKG_DESCRIPTION").expect("Package description not defined in cargo.toml, required for G-Rust extensions"),
+            author: env::var("CARGO_PKG_AUTHORS").expect("Package author(s) not defined in cargo.toml, required for G-Rust extensions"),
+            version: env::var("CARGO_PKG_VERSION").expect("Package version not defined in cargo.toml, required for G-Rust extensions")
         }
     }
 }
@@ -173,10 +172,10 @@ impl Extension {
         let cookie = self.get_argument(COOKIE_FLAG);
         let mut response = HPacket::from_header_id(OutgoingMessageIds::EXTENSION_INFO);
         response.append((
-            String::from(self.info.name),
-            String::from(self.info.author),
-            String::from(self.info.version),
-            String::from(self.info.description),
+            self.info.name.clone(),
+            self.info.author.clone(),
+            self.info.version.clone(),
+            self.info.description.clone(),
             !self.on_click.is_empty(), // onclick
             file != "", // file == null
             String::from(file), // file
@@ -348,8 +347,6 @@ impl Extension {
             (listener)(ext, msg, &mut object);
 
             if original_object != object {
-                println!("Original: {original_object:?}");
-                println!("New:      {object:?}");
                 msg.get_packet().replace(6, object);
             }
         };
@@ -390,24 +387,17 @@ impl Extension {
         if !packet.is_complete()
             && self.packet_info_manager.clone().is_some()
             && packet.can_complete(self.packet_info_manager.clone().unwrap()) {
-            println!("Packet not complete");
             packet.complete_packet(self.packet_info_manager.clone().unwrap());
         }
         if !packet.is_complete() {
-            println!("Packet still not complete");
             return false;
         }
-
-        println!("packet: {packet:?}");
 
         let mut sending_packet = HPacket::from_header_id(OutgoingMessageIds::SEND_MESSAGE);
         sending_packet.append((direction as u8, packet.bytes_length() as i32));
         sending_packet.append_bytes(packet.get_bytes());
 
-        println!("sending_packet: {sending_packet:?}");
-
         self.connection.clone().unwrap().write(sending_packet.get_bytes());
-        println!("Packet sent");
 
         return true;
     }

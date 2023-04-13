@@ -12,7 +12,7 @@ use g_rust::protocol::hpacket::HPacket;
 fn test_connection() {
     let mut ext = Extension::new();
     ext.args = vec!["-p".to_string(), "9092".to_string()];
-    ext.info.name = "G-Rust test";
+    ext.info.name = String::from("G-Rust test");
     ext.on_init(on_init);
     ext.on_socket_disconnect(on_socket_disconnect);
     ext.on_connect(on_connect);
@@ -43,7 +43,7 @@ fn on_socket_disconnect(_ext: &mut Extension) {
 fn on_host_info_update(ext: &mut Extension, info: HostInfo) {
     println!("{ext:?}");
     println!("{info:?}");
-    ext.info.name = "abc";
+    ext.info.name = String::from("abc");
 }
 
 fn on_click(ext: &mut Extension) {
@@ -71,7 +71,7 @@ fn on_chat(_ext: &mut Extension, msg: &mut HMessage) {
 fn test_intercept() {
     let mut ext = Extension::new();
     ext.args = vec!["-p".to_string(), "9092".to_string()];
-    ext.info.name = "G-Rust test";
+    ext.info.name = String::from("G-Rust test");
     ext.intercept(on_user_update);
     ext.run();
 }
