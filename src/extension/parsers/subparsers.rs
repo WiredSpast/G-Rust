@@ -2666,12 +2666,12 @@ pub struct MarketplaceItemStatsData {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MarketPlaceOffer {
     pub offer_id: LegacyId,
-    pub furni_id: LegacyId,
-    pub furni_type: i32,
-    pub extra_data: String,
-    pub stuff_data: StuffData,
-    pub price: i32,
     pub status: i32,
+    pub furni_type: i32,
+    pub furni_id: LegacyId,
+    pub stuff_data: StuffData,
+    pub extra_data: String,
+    pub price: i32,
     pub time_left_minutes: i32,
     pub average_price: i32,
     pub offer_count: i32

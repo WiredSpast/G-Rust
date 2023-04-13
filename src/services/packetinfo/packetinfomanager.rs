@@ -4,7 +4,7 @@ use crate::protocol::hpacket::HPacket;
 use crate::protocol::vars::packetvariable::PacketVariable;
 use crate::services::packetinfo::packetinfo::PacketInfo;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PacketInfoManager {
     header_id_to_message_incoming: HashMap<i32, Vec<PacketInfo>>,
     header_id_to_message_outgoing: HashMap<i32, Vec<PacketInfo>>,
@@ -89,7 +89,7 @@ impl PacketVariable for PacketInfoManager {
 }
 
 impl PacketInfoManager {
-    pub fn get_all_packet_info_from_header_id(mut self, direction: HDirection, header_id: i32) -> Vec<PacketInfo> {
+    pub fn get_all_packet_info_from_header_id(&mut self, direction: HDirection, header_id: i32) -> Vec<PacketInfo> {
         if direction == HDirection::ToClient {
             self.header_id_to_message_incoming.entry(header_id).or_default().clone()
         } else {
@@ -97,7 +97,7 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_all_packet_info_from_hash(mut self, direction: HDirection, hash: String) -> Vec<PacketInfo> {
+    pub fn get_all_packet_info_from_hash(&mut self, direction: HDirection, hash: String) -> Vec<PacketInfo> {
         if direction == HDirection::ToClient {
             self.hash_to_message_incoming.entry(hash).or_default().clone()
         } else {
@@ -105,7 +105,7 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_all_packet_info_from_name(mut self, direction: HDirection, name: String) -> Vec<PacketInfo> {
+    pub fn get_all_packet_info_from_name(&mut self, direction: HDirection, name: String) -> Vec<PacketInfo> {
         if direction == HDirection::ToClient {
             self.name_to_message_incoming.entry(name).or_default().clone()
         } else {
@@ -113,7 +113,7 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_packet_info_from_header_id(self, direction: HDirection, header_id: i32) -> Option<PacketInfo> {
+    pub fn get_packet_info_from_header_id(&mut self, direction: HDirection, header_id: i32) -> Option<PacketInfo> {
         let all = self.get_all_packet_info_from_header_id(direction, header_id);
         if all.is_empty() {
             None
@@ -122,7 +122,7 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_packet_info_from_hash(self, direction: HDirection, hash: String) -> Option<PacketInfo> {
+    pub fn get_packet_info_from_hash(&mut self, direction: HDirection, hash: String) -> Option<PacketInfo> {
         let all = self.get_all_packet_info_from_hash(direction, hash);
         if all.is_empty() {
             None
@@ -131,8 +131,8 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_packet_info_from_name(self, direction: HDirection, name: String) -> Option<PacketInfo> {
-        let all = self.get_all_packet_info_from_hash(direction, name);
+    pub fn get_packet_info_from_name(&mut self, direction: HDirection, name: String) -> Option<PacketInfo> {
+        let all = self.get_all_packet_info_from_name(direction, name);
         if all.is_empty() {
             None
         } else {
@@ -140,7 +140,7 @@ impl PacketInfoManager {
         }
     }
 
-    pub fn get_packet_info_list(self) -> Vec<PacketInfo> {
+    pub fn get_packet_info_list(&mut self) -> Vec<PacketInfo> {
         self.packet_info_list.clone()
     }
 }

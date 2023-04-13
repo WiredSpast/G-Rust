@@ -62,48 +62,47 @@ impl HPacket {
         res
     }
 
-    // TODO test from_string
     pub fn from_string(s: String) -> HPacket {
         let mut res = HPacket::default();
-        res.is_edited = s.bytes().nth(0).unwrap() == '1' as u8;
+        res.is_edited = s.chars().nth(0).unwrap() == '1';
         res.packet_in_bytes = ISO_8859_1.encode(&s[1..], EncoderTrap::Ignore).unwrap();
         res
     }
 
-    pub fn eof(&self) -> i8 {
+    pub fn eof(&mut self) -> i8 {
         if self.read_index < self.packet_in_bytes.len() { 0 }
         else if self.read_index > self.packet_in_bytes.len() { 2 }
         else { 1 }
     }
 
-    pub(crate) fn can_complete(mut self, manager: PacketInfoManager) -> bool {
+    pub(crate) fn can_complete(&mut self, manager: PacketInfoManager) -> bool {
         if self.is_corrupted() || self.identifier == "" || self.identifier_direction == HDirection::None {
             return false;
         }
 
         let packet_info = manager.clone()
             .get_packet_info_from_name(self.identifier_direction.clone(), self.identifier.clone())
-            .or(manager.get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
+            .or(manager.clone().get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
 
         return packet_info.is_some();
     }
 
-    pub fn can_send_to_client(&self) -> bool {
+    pub fn can_send_to_client(&mut self) -> bool {
         self.identifier_direction == HDirection::ToClient
     }
 
-    pub fn can_send_to_server(&self) -> bool {
+    pub fn can_send_to_server(&mut self) -> bool {
         self.identifier_direction == HDirection::ToServer
     }
 
-    pub(crate) fn complete_packet(mut self, manager: PacketInfoManager) {
+    pub(crate) fn complete_packet(&mut self, manager: PacketInfoManager) {
         if self.is_corrupted() || self.identifier == "" || self.identifier_direction == HDirection::None {
             return;
         }
 
         let packet_info = manager.clone()
             .get_packet_info_from_name(self.identifier_direction.clone(), self.identifier.clone())
-            .or(manager.get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
+            .or(manager.clone().get_packet_info_from_hash(self.identifier_direction.clone(), self.identifier.clone()));
 
         if packet_info.is_none() {
             return;
@@ -112,7 +111,7 @@ impl HPacket {
         self.replace(4, packet_info.unwrap().header_id as u16);
     }
 
-    pub fn is_complete(&self) -> bool {
+    pub fn is_complete(&mut self) -> bool {
         self.identifier == ""
     }
 
@@ -219,6 +218,6 @@ impl HPacket {
     }
 
     pub fn stringify(&self) -> String {
-        if self.is_edited { "0" } else { "1" }.to_string() + &*ISO_8859_1.decode(&self.packet_in_bytes[..], DecoderTrap::Ignore).unwrap()
+        if self.is_edited { "1" } else { "0" }.to_string() + &*ISO_8859_1.decode(&self.packet_in_bytes[..], DecoderTrap::Ignore).unwrap()
     }
 }

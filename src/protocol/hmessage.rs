@@ -39,23 +39,23 @@ impl HMessage {
         }
     }
 
-    pub fn get_packet(self) -> HPacket {
-        self.packet
+    pub fn get_packet(&mut self) -> &mut HPacket {
+        &mut self.packet
     }
 
-    pub fn get_index(self) -> i32 {
+    pub fn get_index(&mut self) -> i32 {
         self.index
     }
 
-    pub fn get_destination(self) -> HDirection {
-        self.direction
+    pub fn get_destination(&mut self) -> HDirection {
+        self.direction.clone()
     }
 
-    pub fn is_corrupted(mut self) -> bool {
+    pub fn is_corrupted(&mut self) -> bool {
         self.packet.is_corrupted()
     }
 
-    pub fn stringify(self) -> String {
+    pub fn stringify(&mut self) -> String {
         (if self.blocked { "1" } else { "0" }).to_string() + "\t" + self.index.to_string().as_str() + "\t" + self.direction.to_string().as_str() + "\t" + self.packet.stringify().as_str()
     }
 }

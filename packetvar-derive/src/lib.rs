@@ -22,11 +22,8 @@ fn impl_packet_variable(ast: &syn::DeriveInput) -> Tokens {
         Body::Struct(VariantData::Struct(fields)) => {
             impl_struct_derive(name, fields)
         },
-        // Body::Enum(data) => {
-        //     todo!()
-        // }
         _ => {
-            panic!("Packet Variable arrive not supported for this type");
+            panic!("Packet Variable derive not supported for this type");
         }
     }
 }
