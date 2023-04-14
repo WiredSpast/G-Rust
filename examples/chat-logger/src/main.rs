@@ -14,6 +14,8 @@ fn main() {
     let mut chat_logger: Extension<ChatLogger> = Extension::new();
     chat_logger.info.name = String::from("Chat Logger");
     chat_logger.intercept(on_users);
+    chat_logger.intercept(on_close_connection);
+    chat_logger.intercept(on_user_remove);
     chat_logger.intercept(on_chat);
     chat_logger.run();
 }
