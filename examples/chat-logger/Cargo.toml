@@ -1,0 +1,9 @@
+[package]
+name = "chat-logger"
+version = "0.1.0"
+edition = "2021"
+authors = ["WiredSpast"]
+description = "A chat logger example extension"
+
+[dependencies]
+g-rust = { path = "../../.", version = "0.0.1-beta.3" }

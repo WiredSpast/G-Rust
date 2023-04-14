@@ -6,4 +6,4 @@ authors = ["WiredSpast"]
 description = "A basic example extension"
 
 [dependencies]
-g-rust = "0.0.1-beta.2"
+g-rust = { path = "../../.", version = "0.0.1-beta.3" }

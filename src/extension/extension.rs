@@ -35,9 +35,9 @@ pub struct ExtensionInfo {
     pub version: String
 }
 
-impl ExtensionInfo {
-    fn read_from_cargo() -> Self {
-        ExtensionInfo {
+impl Default for ExtensionInfo {
+    fn default() -> Self {
+        Self {
             name: env::var("CARGO_PKG_NAME").expect("Package name not defined in cargo.toml, required for G-Rust extensions"),
             description: env::var("CARGO_PKG_DESCRIPTION").expect("Package description not defined in cargo.toml, required for G-Rust extensions"),
             author: env::var("CARGO_PKG_AUTHORS").expect("Package author(s) not defined in cargo.toml, required for G-Rust extensions"),
@@ -46,9 +46,10 @@ impl ExtensionInfo {
     }
 }
 
-pub struct Extension {
+pub struct Extension<W: Debug + Default> {
     pub info: ExtensionInfo,
     pub args: Vec<String>,
+    pub globals: W,
     connection: Option<GEarthConnection>,
     packet_info_manager: Option<PacketInfoManager>,
 
@@ -63,26 +64,28 @@ pub struct Extension {
     on_host_info_update: Vec<fn(&mut Self, HostInfo)>,
     on_socket_disconnect: Vec<fn(&mut Self)>,
 
-    intercepts_by_id: HashMap<HDirection, HashMap<i16, Vec<Box<dyn Fn(&mut Extension, &mut HMessage)>>>>,
-    intercepts_by_name: HashMap<HDirection, HashMap<String, Vec<Box<dyn Fn(&mut Extension, &mut HMessage)>>>>,
+    intercepts_by_id: HashMap<HDirection, HashMap<i16, Vec<Box<dyn Fn(&mut Self, &mut HMessage)>>>>,
+    intercepts_by_name: HashMap<HDirection, HashMap<String, Vec<Box<dyn Fn(&mut Self, &mut HMessage)>>>>,
 
     flag_callback: Option<fn(&mut Self, Vec<String>)>
 }
 
-impl Debug for Extension {
+impl <W: Debug + Default> Debug for Extension<W> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Extension")
             .field("info", &self.info)
             .field("args", &self.args)
+            .field("globals", &self.globals)
             .finish()
     }
 }
 
-impl Extension {
+impl <W: Debug + Default + 'static> Extension<W> {
     pub fn new() -> Self {
         Extension {
-            info: ExtensionInfo::read_from_cargo(),
+            info: ExtensionInfo::default(),
             connection: None,
+            globals: W::default(),
             args: env::args().collect(),
             packet_info_manager: None,
 
@@ -235,8 +238,6 @@ impl Extension {
         let string_message: LongString = packet.read();
         let mut h_message = HMessage::from_string(string_message.clone());
 
-        // todo modify_message
-        //self.write_to_console(String::from("Packet intercepted"));
         self.modify_message(&mut h_message);
 
         let mut response_packet = HPacket::from_header_id(OutgoingMessageIds::MANIPULATED_PACKET);
@@ -258,7 +259,7 @@ impl Extension {
                 .collect()
         } else { Vec::new() };
 
-        let mut matching_listeners_by_id: Vec<Box<dyn Fn(&mut Extension, &mut HMessage)>> = Vec::new();
+        let mut matching_listeners_by_id: Vec<Box<dyn Fn(&mut Self, &mut HMessage)>> = Vec::new();
         let header_id = msg.get_packet().header_id();
         let intercepts_by_id = self.intercepts_by_id.get_mut(&msg.get_destination());
         if intercepts_by_id.is_some() {
@@ -274,7 +275,7 @@ impl Extension {
             self.intercept_raw(msg.get_destination(), header_id as i32, listener);
         }
 
-        let mut matching_listeners_by_name: Vec<Box<dyn Fn(&mut Extension, &mut HMessage)>> = Vec::new();
+        let mut matching_listeners_by_name: Vec<Box<dyn Fn(&mut Self, &mut HMessage)>> = Vec::new();
         let intercepts_by_name = self.intercepts_by_name.get_mut(&msg.get_destination());
         let mut name = String::default();
         if intercepts_by_name.is_some() {
@@ -340,7 +341,7 @@ impl Extension {
     }
 
     pub fn intercept<T: BaseParser + 'static>(&mut self, listener: fn(ext: &mut Self, msg: &mut HMessage, object: &mut T)) {
-        let wrapped_listener = move | ext: &mut Extension, msg: &mut HMessage | {
+        let wrapped_listener = move | ext: &mut Self, msg: &mut HMessage | {
             let mut original_packet = msg.get_packet().clone();
             let mut object: T = original_packet.read();
             let original_object = object.clone();
@@ -353,7 +354,7 @@ impl Extension {
         self.intercept_raw(T::get_direction(), T::get_packet_name(), wrapped_listener);
     }
 
-    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Extension, &mut HMessage) -> () + 'static) {
+    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Self, &mut HMessage) -> () + 'static) {
         let intercepts = if I::is_raw_habbo_header_id() {
             self.intercepts_by_id
                 .entry(direction)

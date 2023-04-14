@@ -8,9 +8,12 @@ use g_rust::protocol::hdirection::HDirection;
 use g_rust::protocol::hmessage::HMessage;
 use g_rust::protocol::hpacket::HPacket;
 
+#[derive(Debug, Default)]
+struct Test {}
+
 #[test]
 fn test_connection() {
-    let mut ext = Extension::new();
+    let mut ext: Extension<Test> = Extension::new();
     ext.args = vec!["-p".to_string(), "9092".to_string()];
     ext.info.name = String::from("G-Rust test");
     ext.on_init(on_init);
@@ -23,12 +26,12 @@ fn test_connection() {
     ext.run();
 }
 
-fn on_init(ext: &mut Extension) {
+fn on_init(ext: &mut Extension<Test>) {
     println!("Extension initialized");
     ext.request_flags(on_flags);
 }
 
-fn on_connect(ext: &mut Extension, info: ConnectionInfo) {
+fn on_connect(ext: &mut Extension<Test>, info: ConnectionInfo) {
     println!("{info:?}");
     let packet_info_manager = ext.get_packet_info_manager().unwrap();
     // println!("Chatinfo: {packet_info_manager:?}");
@@ -36,17 +39,17 @@ fn on_connect(ext: &mut Extension, info: ConnectionInfo) {
     println!("Chatinfo: {chat_info:?}");
 }
 
-fn on_socket_disconnect(_ext: &mut Extension) {
+fn on_socket_disconnect(_ext: &mut Extension<Test>) {
     println!("Socket disconnected");
 }
 
-fn on_host_info_update(ext: &mut Extension, info: HostInfo) {
+fn on_host_info_update(ext: &mut Extension<Test>, info: HostInfo) {
     println!("{ext:?}");
     println!("{info:?}");
     ext.info.name = String::from("abc");
 }
 
-fn on_click(ext: &mut Extension) {
+fn on_click(ext: &mut Extension<Test>) {
     ext.send(incoming::Chat {
         user_index: 0,
         text: "G-Rust says hi".to_string(),
@@ -57,11 +60,11 @@ fn on_click(ext: &mut Extension) {
     });
 }
 
-fn on_flags(ext: &mut Extension, flags: Vec<String>) {
+fn on_flags(ext: &mut Extension<Test>, flags: Vec<String>) {
     println!("Flags: {flags:?}");
 }
 
-fn on_chat(_ext: &mut Extension, msg: &mut HMessage) {
+fn on_chat(_ext: &mut Extension<Test>, msg: &mut HMessage) {
     let mut chat: incoming::Chat = msg.get_packet().read();
     chat.text = String::from("G-Rust says hi");
     msg.get_packet().replace(6, chat);
@@ -69,14 +72,14 @@ fn on_chat(_ext: &mut Extension, msg: &mut HMessage) {
 
 #[test]
 fn test_intercept() {
-    let mut ext = Extension::new();
+    let mut ext: Extension<Test> = Extension::new();
     ext.args = vec!["-p".to_string(), "9092".to_string()];
     ext.info.name = String::from("G-Rust test");
     ext.intercept(on_user_update);
     ext.run();
 }
 
-fn on_user_update(_ext: &mut Extension, msg: &mut HMessage, user_update: &mut UserUpdate) {
+fn on_user_update(_ext: &mut Extension<Test>, msg: &mut HMessage, user_update: &mut UserUpdate) {
     println!("{user_update:?}");
 }
 
