@@ -69,6 +69,10 @@ impl HPacket {
         res
     }
 
+    pub fn get_bytes_available(&mut self) -> usize {
+        self.packet_in_bytes.len() - self.read_index
+    }
+
     pub fn eof(&mut self) -> i8 {
         if self.read_index < self.packet_in_bytes.len() { 0 }
         else if self.read_index > self.packet_in_bytes.len() { 2 }

@@ -7,7 +7,7 @@ use crate::protocol::vars::packetvariable::PacketVariable;
 use super::baseparser::BaseParser;
 use super::subparsers::*;
 
-// WIN63-202303241432-611275200
+// WIN63-202304141420-620844112
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
@@ -1483,7 +1483,7 @@ impl PacketVariable for HeightMapUpdate {
         let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
 
         let mut tile_updates = Vec::new();
-        let count: i16 = packet.read();
+        let count: i8 = packet.read();
         for _ in 0..count {
             tile_updates.push(packet.read());
         }
@@ -1643,6 +1643,7 @@ pub struct SlideObjectBundle {
     pub new_x: i32,
     pub new_y: i32,
     pub objects_z: HashMap<LegacyId, SlideObjectHeight>,
+    pub id: LegacyId,
     pub avatar_movement_type: i32,
     pub avatar_id: LegacyId,
     pub avatar_old_z: LegacyDouble,
@@ -1653,10 +1654,11 @@ impl PacketVariable for SlideObjectBundle {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
         let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
 
-        let (old_x, old_y, new_x, new_y, objects_z, avatar_movement_type) = packet.read();
+        let (old_x, old_y, new_x, new_y, objects_z, id) = packet.read();
+        let avatar_movement_type  = packet.read::<Option<i32>>().unwrap_or(-1);
 
         (Self {
-            old_x, old_y, new_x, new_y, objects_z, avatar_movement_type,
+            old_x, old_y, new_x, new_y, objects_z, id, avatar_movement_type,
             avatar_id: if vec![1, 2].contains(&avatar_movement_type) { packet.read() } else { LegacyId::default() },
             avatar_old_z: if vec![1, 2].contains(&avatar_movement_type) { packet.read() } else { LegacyDouble::default() },
             avatar_new_z: if vec![1, 2].contains(&avatar_movement_type) { packet.read() } else { LegacyDouble::default() }
@@ -1667,13 +1669,18 @@ impl PacketVariable for SlideObjectBundle {
         if vec![1, 2].contains(&self.avatar_movement_type) {
             (
                 self.old_x, self.old_y, self.new_x, self.new_y,
-                self.objects_z.clone(), self.avatar_movement_type,
+                self.objects_z.clone(), self.id, self.avatar_movement_type,
                 self.avatar_id, self.avatar_old_z, self.avatar_new_z
+            ).to_packet()
+        } else if self.avatar_movement_type == 0 {
+            (
+                self.old_x, self.old_y, self.new_x, self.new_y,
+                self.objects_z.clone(), self.id, self.avatar_movement_type
             ).to_packet()
         } else {
             (
                 self.old_x, self.old_y, self.new_x, self.new_y,
-                self.objects_z.clone(), self.avatar_movement_type
+                self.objects_z.clone(), self.id
             ).to_packet()
         }
     }
@@ -2154,10 +2161,10 @@ pub struct Game2WeeklyGroupLeaderboard {
     pub max_offset: i32,
     pub current_offset: i32,
     pub minutes_until_reset: i32,
-    pub favourite_group_id: LegacyId,
     pub leaderboard: Vec<LeaderBoardEntry>,
     pub total_list_size: i32,
-    pub game_type_id: i32
+    pub game_type_id: i32,
+    pub favourite_group_id: LegacyId
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -3650,4 +3657,27 @@ pub struct CommunityVoteReceived {
 #[to(direction = 0)]
 pub struct UserClassification {
     pub classified_users: Vec<ClassifiedUser>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ItemStateUpdate {
+    pub id: LegacyId,
+    pub item_data: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct WiredWallItemMove {
+    pub id: LegacyId,
+    pub is_direction_right: bool,
+    pub old_wall_x: i32,
+    pub old_wall_y: i32,
+    pub old_offset_x: i32,
+    pub old_offset_y: i32,
+    pub new_wall_x: i32,
+    pub new_wall_y: i32,
+    pub new_offset_x: i32,
+    pub new_offset_y: i32,
+    pub animation_time: i32
 }

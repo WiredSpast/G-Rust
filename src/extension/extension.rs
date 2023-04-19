@@ -341,7 +341,15 @@ impl <W: Debug + Default + 'static> Extension<W> {
     }
 
     pub fn intercept<T: BaseParser + 'static>(&mut self, listener: fn(ext: &mut Self, msg: &mut HMessage, object: &mut T)) {
-        let wrapped_listener = move | ext: &mut Self, msg: &mut HMessage | {
+        self.intercept_raw(T::get_direction(), T::get_packet_name(), Self::wrap_listener(listener));
+    }
+
+    pub fn intercept_by_id<T: BaseParser + 'static>(&mut self, id: i32, listener: fn(ext: &mut Self, msg: &mut HMessage, object: &mut T)) {
+        self.intercept_raw(T::get_direction(), id, Self::wrap_listener(listener));
+    }
+
+    fn wrap_listener<T: BaseParser + 'static>(listener: fn(ext: &mut Self, msg: &mut HMessage, object: &mut T)) -> impl Fn(&mut Self, &mut HMessage) + 'static {
+        move | ext: &mut Self, msg: &mut HMessage | {
             let mut original_packet = msg.get_packet().clone();
             let mut object: T = original_packet.read();
             let original_object = object.clone();
@@ -350,11 +358,10 @@ impl <W: Debug + Default + 'static> Extension<W> {
             if original_object != object {
                 msg.get_packet().replace(6, object);
             }
-        };
-        self.intercept_raw(T::get_direction(), T::get_packet_name(), wrapped_listener);
+        }
     }
 
-    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Self, &mut HMessage) -> () + 'static) {
+    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Self, &mut HMessage) + 'static) {
         let intercepts = if I::is_raw_habbo_header_id() {
             self.intercepts_by_id
                 .entry(direction)

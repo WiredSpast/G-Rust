@@ -5,6 +5,8 @@ use crate::protocol::hpacket::HPacket;
 use crate::protocol::vars::legacy::{LegacyId, LegacyLength, LegacyDouble};
 use crate::protocol::vars::packetvariable::PacketVariable;
 
+// WIN63-202304141420-620844112
+
 #[derive(Clone, Debug, Default, PacketVariable, PartialEq, Eq)]
 pub struct FurnitureProductItem {
     pub product_code: String,
@@ -1107,8 +1109,8 @@ impl PacketVariable for HeightMapTile {
 
 #[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
 pub struct HeightMapTileUpdate {
-    pub x: i16,
-    pub y: i16,
+    pub x: i8,
+    pub y: i8,
     pub tile: HeightMapTile
 }
 
@@ -1118,6 +1120,7 @@ pub struct WallItem {
     pub type_id: i32,
     pub location: String,
     pub data_str: String,
+    pub seconds_to_expiration: i32,
     pub usage_policy: i32,
     pub owner_id: LegacyId,
     pub owner_name: Option<String>
@@ -1127,18 +1130,18 @@ impl PacketVariable for WallItem {
     fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
         let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
 
-        let (id, type_id, location, data_str, usage_policy, owner_id) = packet.read();
+        let (id, type_id, location, data_str, seconds_to_expiration, usage_policy, owner_id) = packet.read();
 
         (Self {
-            id, type_id, location, data_str, usage_policy, owner_id,
+            id, type_id, location, data_str, seconds_to_expiration, usage_policy, owner_id,
             owner_name: None
         }, packet.read_index - 6)
     }
 
     fn to_packet(&self) -> Vec<u8> {
         (
-            self.id, self.type_id, self.location.clone(),
-            self.data_str.clone(), self.usage_policy, self.owner_id
+            self.id, self.type_id, self.location.clone(), self.data_str.clone(),
+            self.seconds_to_expiration, self.usage_policy, self.owner_id
         ).to_packet()
     }
 }
@@ -1157,8 +1160,8 @@ pub struct FloorItem {
     pub expiry_time: i32,
     pub usage_policy: i32,
     pub owner_id: i32,
-    pub owner_name: Option<String>,
-    pub static_class: String
+    pub static_class: String,
+    pub owner_name: Option<String>
 }
 
 impl PacketVariable for FloorItem {
@@ -1169,8 +1172,8 @@ impl PacketVariable for FloorItem {
 
         (Self {
             id, type_id, x, y, dir, z, size_z, extra, data, expiry_time, usage_policy, owner_id,
-            owner_name: None,
-            static_class: if *id < 0 { packet.read() } else { "".to_string()}
+            static_class: if *id < 0 { packet.read() } else { "".to_string()},
+            owner_name: None
         }, packet.read_index - 6)
     }
 
@@ -1633,59 +1636,198 @@ impl PacketVariable for WiredUserMoveType {
     }
 }
 
-#[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ActionDefinition {
-    pub stuff_type_selection_enabled: bool,
     pub furni_limit: i32,
     pub stuff_ids: Vec<LegacyId>,
     pub stuff_type_id: i32,
     pub id: LegacyId,
     pub string_param: String,
     pub int_params: Vec<i32>,
-    pub stuff_type_selection_code: i32,
+    pub _unknown1: Vec<i32>,
+    pub _unknown2: Vec<i32>,
     pub code: i32,
     pub delay_in_pulses: i32,
-    pub conflicting_triggers: Vec<i32>
+    pub _unknown3: Vec<u8>,
+    pub allow_wall_furni: bool
 }
 
-#[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
+impl PacketVariable for ActionDefinition {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+        let (
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code, delay_in_pulses
+        ) = packet.read();
+
+        let bytes_left = packet.get_bytes_available();
+        let _unknown3 = packet.read_bytes(bytes_left - 1);
+        let allow_wall_furni = packet.read();
+
+        (Self {
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code, delay_in_pulses, _unknown3, allow_wall_furni
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        let mut packet = HPacket::from_header_id(0);
+
+        packet.append((
+            self.furni_limit, self.stuff_ids.clone(), self.stuff_type_id, self.id,
+            self.string_param.clone(), self.int_params.clone(), self._unknown1.clone(),
+            self._unknown2.clone(), self.code, self.delay_in_pulses
+        ));
+        packet.append_bytes(self._unknown3.clone());
+        packet.append(self.allow_wall_furni);
+
+        packet.get_bytes()[6..].to_vec()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct AddonDefinition {
-    pub stuff_type_selection_enabled: bool,
     pub furni_limit: i32,
     pub stuff_ids: Vec<LegacyId>,
     pub stuff_type_id: i32,
     pub id: LegacyId,
     pub string_param: String,
     pub int_params: Vec<i32>,
-    pub stuff_type_selection_code: i32,
-    pub code: i32
-}
-
-#[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
-pub struct ConditionDefinition {
-    pub stuff_type_selection_enabled: bool,
-    pub furni_limit: i32,
-    pub stuff_ids: Vec<LegacyId>,
-    pub stuff_type_id: i32,
-    pub id: LegacyId,
-    pub string_param: String,
-    pub int_params: Vec<i32>,
-    pub stuff_type_selection_code: i32,
-    pub code: i32
-}
-
-#[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
-pub struct TriggerDefinition {
-    pub stuff_type_selection_enabled: bool,
-    pub furni_limit: i32,
-    pub stuff_ids: Vec<LegacyId>,
-    pub stuff_type_id: i32,
-    pub id: LegacyId,
-    pub string_param: String,
-    pub int_params: Vec<i32>,
-    pub stuff_type_selection_code: i32,
+    pub _unknown1: Vec<i32>,
+    pub _unknown2: Vec<i32>,
     pub code: i32,
-    pub conflicting_actions: Vec<i32>
+    pub _unknown3: Vec<u8>,
+    pub allow_wall_furni: bool
+}
+
+impl PacketVariable for AddonDefinition {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+        let (
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code
+        ) = packet.read();
+
+        let bytes_left = packet.get_bytes_available();
+        let _unknown3 = packet.read_bytes(bytes_left - 1);
+        let allow_wall_furni = packet.read();
+
+        (Self {
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code, _unknown3, allow_wall_furni
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        let mut packet = HPacket::from_header_id(0);
+
+        packet.append((
+            self.furni_limit, self.stuff_ids.clone(), self.stuff_type_id, self.id,
+            self.string_param.clone(), self.int_params.clone(), self._unknown1.clone(),
+            self._unknown2.clone(), self.code
+        ));
+        packet.append_bytes(self._unknown3.clone());
+        packet.append(self.allow_wall_furni);
+
+        packet.get_bytes()[6..].to_vec()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ConditionDefinition {
+    pub furni_limit: i32,
+    pub stuff_ids: Vec<LegacyId>,
+    pub stuff_type_id: i32,
+    pub id: LegacyId,
+    pub string_param: String,
+    pub int_params: Vec<i32>,
+    pub _unknown1: Vec<i32>,
+    pub _unknown2: Vec<i32>,
+    pub code: i32,
+    pub _unknown3: Vec<u8>,
+    pub allow_wall_furni: bool,
+    pub _unknown4: u8
+}
+
+impl PacketVariable for ConditionDefinition {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+        let (
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code
+        ) = packet.read();
+
+        let bytes_left = packet.get_bytes_available();
+        let _unknown3 = packet.read_bytes(bytes_left - 2);
+        let (allow_wall_furni, _unknown4) = packet.read();
+
+        (Self {
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code, _unknown3, allow_wall_furni, _unknown4
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        let mut packet = HPacket::from_header_id(0);
+
+        packet.append((
+            self.furni_limit, self.stuff_ids.clone(), self.stuff_type_id, self.id,
+            self.string_param.clone(), self.int_params.clone(), self._unknown1.clone(),
+            self._unknown2.clone(), self.code
+        ));
+        packet.append_bytes(self._unknown3.clone());
+        packet.append((self.allow_wall_furni, self._unknown4));
+
+        packet.get_bytes()[6..].to_vec()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TriggerDefinition {
+    pub furni_limit: i32,
+    pub stuff_ids: Vec<LegacyId>,
+    pub stuff_type_id: i32,
+    pub id: LegacyId,
+    pub string_param: String,
+    pub int_params: Vec<i32>,
+    pub _unknown1: Vec<i32>,
+    pub _unknown2: Vec<i32>,
+    pub code: i32,
+    pub _unknown3: Vec<u8>,
+    pub allow_wall_furni: bool
+}
+
+impl PacketVariable for TriggerDefinition {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+        let (
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code
+        ) = packet.read();
+
+        let bytes_left = packet.get_bytes_available();
+        let _unknown3 = packet.read_bytes(bytes_left - 1);
+        let allow_wall_furni = packet.read();
+
+        (Self {
+            furni_limit, stuff_ids, stuff_type_id, id, string_param, int_params, _unknown1,
+            _unknown2, code, _unknown3, allow_wall_furni
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        let mut packet = HPacket::from_header_id(0);
+
+        packet.append((
+            self.furni_limit, self.stuff_ids.clone(), self.stuff_type_id, self.id,
+            self.string_param.clone(), self.int_params.clone(), self._unknown1.clone(),
+            self._unknown2.clone(), self.code
+        ));
+        packet.append_bytes(self._unknown3.clone());
+        packet.append(self.allow_wall_furni);
+
+        packet.get_bytes()[6..].to_vec()
+    }
 }
 
 #[derive(Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -2361,6 +2503,7 @@ pub struct ItemDataStructure {
     pub room_item_id: LegacyId,
     pub item_type_id: i32,
     pub category: i32,
+    pub is_groupable: bool,
     pub stuff_data: StuffData,
     pub creation_day: i32,
     pub creation_month: i32,
@@ -2374,12 +2517,12 @@ impl PacketVariable for ItemDataStructure {
 
         let item_id = packet.read();
         let item_type: String = packet.read();
-        let (room_item_id, item_type_id, category, stuff_data,
+        let (room_item_id, item_type_id, category, is_groupable, stuff_data,
             creation_day, creation_month, creation_year) = packet.read();
         let extra = if item_type.clone().to_uppercase() == "S" { packet.read() } else { -1 };
 
         (Self {
-            item_id, item_type, room_item_id, item_type_id, category,
+            item_id, item_type, room_item_id, item_type_id, category, is_groupable,
             stuff_data, creation_day, creation_month, creation_year, extra
         }, packet.read_index - 6)
     }
@@ -2388,13 +2531,13 @@ impl PacketVariable for ItemDataStructure {
         if self.item_type.clone().to_uppercase() == "S" {
             (
                 self.item_id, self.item_type.clone(), self.room_item_id, self.item_type_id,
-                self.category, self.stuff_data.clone(), self.creation_day,
+                self.category, self.is_groupable, self.stuff_data.clone(), self.creation_day,
                 self.creation_month, self.creation_year, self.extra
             ).to_packet()
         } else {
             (
                 self.item_id, self.item_type.clone(), self.room_item_id, self.item_type_id,
-                self.category, self.stuff_data.clone(), self.creation_day,
+                self.category, self.is_groupable, self.stuff_data.clone(), self.creation_day,
                 self.creation_month, self.creation_year
             ).to_packet()
         }

@@ -8,7 +8,7 @@ use crate::protocol::vars::packetvariable::PacketVariable;
 use super::baseparser::BaseParser;
 use super::subparsers::*;
 
-// WIN63-202303241432-611275200
+// WIN63-202304141420-620844112
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 1)]
@@ -523,7 +523,8 @@ pub struct UpdateAction {
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
     pub action_delay: i32,
-    pub stuff_selection_type: i32
+    pub _unused1: i32,
+    pub _unused2: i32
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -533,7 +534,8 @@ pub struct UpdateAddon {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub stuff_selection_type: i32
+    pub _unused1: i32,
+    pub _unused2: i32
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -543,7 +545,9 @@ pub struct UpdateCondition {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub stuff_selection_type: i32
+    pub _unused1: i32,
+    pub _unused2: i32,
+    pub _unused3: i32
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -553,7 +557,8 @@ pub struct UpdateTrigger {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub stuff_selection_type: i32
+    pub _unused1: i32,
+    pub _unused2: i32
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]

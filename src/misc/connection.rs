@@ -29,8 +29,10 @@ impl GEarthConnection {
     }
 
     pub fn read(self, length: u64) -> Result<Vec<u8>, Error> {
-        let bytes: Vec<u8> = self.socket.take(length).bytes().filter(| r | r.is_ok()).map(|r| r.unwrap()).collect();
-        if bytes.len() == length as usize {
+        let mut take = self.socket.take(length);
+        let mut bytes = Vec::new();
+        let res = take.read_to_end(&mut bytes);
+        if res.is_ok() && res.unwrap() == length as usize {
             Ok(bytes)
         } else {
             Err(Error)
