@@ -1,9 +1,9 @@
 [workspace]
-members = ["packetvar-derive", "parser-derive", "examples\\basic-extension", "examples\\chat-logger"]
+members = ["packetvar-derive", "parser-derive", "examples\\basic-extension", "examples\\chat-logger", "examples\\clear-wired-selection"]
 
 [package]
 name = "g-rust"
-version = "0.0.1-beta.4"
+version = "0.0.1-beta.5"
 edition = "2021"
 authors = ["WiredSpast"]
 description = "A Rust framework for G-Earth extensions"

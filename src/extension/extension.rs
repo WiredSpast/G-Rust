@@ -38,10 +38,10 @@ pub struct ExtensionInfo {
 impl Default for ExtensionInfo {
     fn default() -> Self {
         Self {
-            name: env::var("CARGO_PKG_NAME").expect("Package name not defined in cargo.toml, required for G-Rust extensions"),
-            description: env::var("CARGO_PKG_DESCRIPTION").expect("Package description not defined in cargo.toml, required for G-Rust extensions"),
-            author: env::var("CARGO_PKG_AUTHORS").expect("Package author(s) not defined in cargo.toml, required for G-Rust extensions"),
-            version: env::var("CARGO_PKG_VERSION").expect("Package version not defined in cargo.toml, required for G-Rust extensions")
+            name: env::var("CARGO_PKG_NAME").unwrap_or("undefined".to_string()),
+            description: env::var("CARGO_PKG_DESCRIPTION").unwrap_or("undefined".to_string()),
+            author: env::var("CARGO_PKG_AUTHORS").unwrap_or("undefined".to_string()),
+            version: env::var("CARGO_PKG_VERSION").unwrap_or("undefined".to_string())
         }
     }
 }

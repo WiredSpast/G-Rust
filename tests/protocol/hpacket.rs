@@ -80,3 +80,11 @@ fn packet_read_vec() {
 
     assert_eq!(vec![1, 256, 257, 65536, 65537, 65792, 65793, 16777216, 16777217, 16777472], res);
 }
+
+#[test]
+fn stringify() {
+    let mut packet = HPacket::from_bytes(vec![0, 0, 0, 15, 0, 15, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3]);
+    println!("{}", packet.stringify());
+    let mut packet2 = HPacket::from_string(packet.stringify());
+    println!("{:?}", packet2.get_bytes());
+}

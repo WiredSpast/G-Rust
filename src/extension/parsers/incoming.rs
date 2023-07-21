@@ -7,7 +7,96 @@ use crate::protocol::vars::packetvariable::PacketVariable;
 use super::baseparser::BaseParser;
 use super::subparsers::*;
 
-// WIN63-202304141420-620844112
+// WIN63-202307020022-676506471
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct AuthenticationOK {
+    pub account_id: LegacyId,
+    pub suggested_login_actions: Vec<i16>,
+    pub identity_id: LegacyId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CompleteDiffieHandshake {
+    pub encrypted_public_key: String,
+    pub server_client_encryption: Option<bool>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct DisconnectReason {
+    pub reason: Option<i32>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GenericError {
+    pub error_code: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IdentityAccounts {
+    pub accounts: HashMap<i32, String>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct InitDiffieHandshake {
+    pub encrypted_prime: String,
+    pub encrypted_generator: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IsFirstLoginOfDay {
+    pub is_first_login_of_day: bool
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct NoobnessLevel {
+    pub level: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct Ping {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UniqueMachineID {
+    pub machine_id: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UserObject {
+    pub id: LegacyId,
+    pub name: String,
+    pub figure: String,
+    pub sex: String,
+    pub custom_data: String,
+    pub real_name: String,
+    pub direct_mail: bool,
+    pub respect_total: i32,
+    pub respect_left: i32,
+    pub pet_respect_left: i32,
+    pub stream_publishing_allowed: bool,
+    pub last_access_date: String,
+    pub name_change_allowed: bool,
+    pub account_safety_locked: bool
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UserRights {
+    pub club_level: i32,
+    pub security_level: i32,
+    pub is_ambassador: bool
+}
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
@@ -29,12 +118,496 @@ pub struct CraftingRecipesAvailable {
     pub recipe_complete: bool
 }
 
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[derive(BaseParser, Clone, Debug, Default, PartialEq)]
 #[to(direction = 0)]
 pub struct CraftingResult {
     pub success: bool,
     pub product_data: FurnitureProductItem
 }
+
+impl PacketVariable for CraftingResult {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+        let success: bool = packet.read();
+        (CraftingResult {
+            success,
+            product_data: if success { packet.read() } else { Default::default() }
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if self.success {
+            (self.success, self.product_data.clone()).to_packet()
+        } else {
+            self.success.to_packet()
+        }
+    }
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ForumData {
+    pub forum_data: ExtendedForumData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ForumsList {
+    pub list_code: i32,
+    pub total_amount: i32,
+    pub start_index: i32,
+    pub forums: Vec<BaseForumData>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ForumThreads {
+    pub group_id: LegacyId,
+    pub start_index: i32,
+    pub threads: Vec<ThreadData>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct PostMessage {
+    pub group_id: LegacyId,
+    pub thread_id: LegacyId,
+    pub message: MessageData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct PostThread {
+    pub group_id: LegacyId,
+    pub thread: ThreadData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ThreadMessages {
+    pub group_id: LegacyId,
+    pub thread_id: LegacyId,
+    pub start_index: i32,
+    pub messages: Vec<MessageData>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UnreadForumsCount {
+    pub count: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UpdateMessage {
+    pub group_id: LegacyId,
+    pub thread_id: LegacyId,
+    pub message: MessageData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UpdateThread {
+    pub group_id: LegacyId,
+    pub thread: ThreadData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct PromoArticles {
+    pub articles: Vec<PromoArticleData>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CompetitionEntrySubmitResult {
+    pub goal_id: LegacyId,
+    pub goal_code: String,
+    pub result: i32,
+    pub required_furnis: Vec<String>,
+    pub present_furnis: Vec<String>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CompetitionVotingInfo {
+    pub goal_id: LegacyId,
+    pub goal_code: String,
+    pub result_code: i32,
+    pub votes_remaining: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CurrentTimingCode {
+    pub scheduling_str: String,
+    pub code: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IsUserPartOfCompetition {
+    pub is_part_of: bool,
+    pub target_id: LegacyId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct NoOwnedRoomsAlert {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct SecondsUntil {
+    pub time_str: String,
+    pub seconds_until: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct PhoneCollectionState {
+    pub phone_status_code: i32,
+    pub collection_status_code: i32,
+    pub milliseconds_to_allow_process_reset: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct TryPhoneNumberResult {
+    pub result_code: i32,
+    pub millis_to_allow_process_reset: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct TryVerificationCodeResult {
+    pub result_code: i32,
+    pub milliseconds_to_allow_process_reset: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CallForHelpDisabledNotify {
+    pub info_url: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CallForHelpPendingCallsDeleted {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CallForHelpPendingCalls {
+    pub calls: Vec<CallForHelpPendingCall>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CallForHelpReply {
+    pub message: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CallForHelpResult {
+    pub result_type: i32,
+    pub message_text: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ChatReviewSessionDetached {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ChatReviewSessionOfferedToGuide {
+    pub acceptance_timeout: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ChatReviewSessionResults {
+    pub winning_vote_code: i32,
+    pub own_vote_code: i32,
+    pub final_status: Vec<i32>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ChatReviewSessionStarted {
+    pub voting_timeout: i32,
+    pub chat_record: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ChatReviewSessionVotingStatus {
+    pub status: Vec<i32>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideOnDutyStatus {
+    pub on_duty: bool,
+    pub guides_on_duty: i32,
+    pub helpers_on_duty: i32,
+    pub guardians_on_duty: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideReportingStatus {
+    pub status_code: i32,
+    pub pending_ticket: Option<PendingGuideTicket>
+}
+
+impl PacketVariable for GuideReportingStatus {
+    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
+        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
+
+        let status_code = packet.read();
+
+        (Self {
+            status_code,
+            pending_ticket: if status_code == 1 { packet.read() } else { None }
+        }, packet.read_index - 6)
+    }
+
+    fn to_packet(&self) -> Vec<u8> {
+        if self.status_code == 1 && self.pending_ticket.is_some() {
+            (self.status_code, self.pending_ticket.clone()).to_packet()
+        } else if self.status_code == 1 {
+            2i32.to_packet()
+        } else {
+            self.status_code.to_packet()
+        }
+    }
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionAttached {
+    pub as_guide: bool,
+    pub help_request_type: i32,
+    pub help_request_description: String,
+    pub role_specific_wait_time: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionDetached {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionEnded {
+    pub end_reason: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionError {
+    pub error_code: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionInvitedToGuideRoom {
+    pub room_id: LegacyId,
+    pub room_name: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionMessage {
+    pub chat_message: String,
+    pub sender_id: LegacyId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionPartnerIsTyping {
+    pub is_typing: bool
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionRequesterRoom {
+    pub requester_room_id: LegacyId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideSessionStarted {
+    pub requester_user_id: LegacyId,
+    pub requester_name: String,
+    pub requester_figure: String,
+    pub guide_user_id: LegacyId,
+    pub guide_name: String,
+    pub guide_figure: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideTicketCreationResult {
+    pub localization_code: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct GuideTicketResolution {
+    pub localization_code: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IssueCloseNotification {
+    pub close_reason: i32,
+    pub message_text: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct QuizData {
+    pub quiz_code: String,
+    pub question_ids: Vec<i32>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct QuizResults {
+    pub quiz_code: String,
+    pub question_ids_for_wrong_answers: Vec<i32>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct CfhChatlog {
+    pub data: CfhChatlogData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IssueDeleted {
+    pub issue_id: LegacyStringId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IssueInfo {
+    pub issue_data: IssueMessageData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct IssuePickFailed {
+    pub issues: Vec<(LegacyId, LegacyId, String)>,
+    pub retry_enabled: bool,
+    pub retry_count: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorActionResult {
+    pub user_id: LegacyId,
+    pub success: bool
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorCaution {
+    pub message: String,
+    pub url: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorInit {
+    pub data: ModeratorInitData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct Moderator {
+    pub message: String,
+    pub url: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorRoomInfo {
+    pub data: RoomModerationData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorToolPreferences {
+    pub window_x: i32,
+    pub window_y: i32,
+    pub window_width: i32,
+    pub window_height: i32
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct ModeratorUserInfo {
+    pub data: ModeratorUserInfoData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct RoomChatlog {
+    pub data: ChatRecordData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct RoomVisits {
+    pub data: RoomVisitsData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UserBanned {
+    pub message: String
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct UserChatlog {
+    pub data: UserChatlogData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct FurniListAddOrUpdate {
+    pub furni: FurniData
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct FurniList {
+    pub total_fragments: i32,
+    pub fragment_no: i32,
+    pub furni_fragment: Vec<FurniData>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct FurniListInvalidate {}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct FurniListRemove {
+    pub strip_id: LegacyId
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
+pub struct PostItPlaced {
+    pub id: LegacyId,
+    pub items_left: i32
+}
+
+// TODO
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
@@ -451,143 +1024,6 @@ pub struct RoomAdError {
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
-pub struct ForumData {
-    pub forum_data: ExtendedForumData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ForumsList {
-    pub list_code: i32,
-    pub total_amount: i32,
-    pub start_index: i32,
-    pub amount: i32,
-    pub forums: Vec<BaseForumData>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ForumThreads {
-    pub group_id: LegacyId,
-    pub start_index: i32,
-    pub amount: i32,
-    pub threads: Vec<ThreadData>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct PostMessage {
-    pub group_id: LegacyId,
-    pub thread_id: LegacyId,
-    pub message: MessageData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct PostThread {
-    pub group_id: LegacyId,
-    pub thread: ThreadData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ThreadMessages {
-    pub group_id: LegacyId,
-    pub thread_id: LegacyId,
-    pub start_index: i32,
-    pub amount: i32,
-    pub messages: Vec<MessageData>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UnreadForumsCount {
-    pub count: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UpdateMessage {
-    pub group_id: LegacyId,
-    pub thread_id: LegacyId,
-    pub message: MessageData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UpdateThread {
-    pub group_id: LegacyId,
-    pub thread: ThreadData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct PhoneCollectionState {
-    pub phone_status_code: i32,
-    pub collection_status_code: i32,
-    pub milliseconds_to_allow_process_reset: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct TryPhoneNumberResult {
-    pub result_code: i32,
-    pub millis_to_allow_process_reset: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct TryVerificationCodeResult {
-    pub result_code: i32,
-    pub milliseconds_to_allow_process_reset: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CompetitionEntrySubmitResult {
-    pub goal_id: LegacyId,
-    pub goal_code: String,
-    pub result: i32,
-    pub required_furnis: Vec<String>,
-    pub present_furnis: Vec<String>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CompetitionVotingInfo {
-    pub goal_id: LegacyId,
-    pub goal_code: String,
-    pub result_code: i32,
-    pub votes_remaining: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CurrentTimingCode {
-    pub scheduling_str: String,
-    pub code: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IsUserPartOfCompetition {
-    pub is_part_of: bool,
-    pub target_id: LegacyId
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct NoOwnedRoomsAlert {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct SecondsUntil {
-    pub time_str: String,
-    pub seconds_until: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
 pub struct AchievementResolutionCompleted {
     pub stuff_code: String,
     pub badge_code: String
@@ -986,104 +1422,6 @@ pub struct YoutubeDisplayVideo {
     pub start_at_seconds: i32,
     pub end_at_seconds: i32,
     pub state: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CfhChatlog {
-    pub data: CfhChatlogData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IssueDeleted {
-    pub issue_id: LegacyStringId
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IssueInfo {
-    pub issue_data: IssueMessageData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IssuePickFailed {
-    pub issues: Vec<(LegacyId, LegacyId,  String)>,
-    pub retry_enabled: bool,
-    pub retry_count: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorActionResult {
-    pub user_id: LegacyId,
-    pub success: bool
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorCaution {
-    pub message: String,
-    pub url: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorInit {
-    pub data: ModeratorInitData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct Moderator {
-    pub message: String,
-    pub url: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorRoomInfo {
-    pub data: RoomModerationData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorToolPreferences {
-    pub window_x: i32,
-    pub window_y: i32,
-    pub window_width: i32,
-    pub window_height: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ModeratorUserInfo {
-    pub data: ModeratorUserInfoData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct RoomChatlog {
-    pub data: ChatRecordData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct RoomVisits {
-    pub data: RoomVisitsData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UserBanned {
-    pub message: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UserChatlog {
-    pub data: UserChatlogData
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PartialEq)]
@@ -1773,6 +2111,12 @@ pub struct WiredFurniCondition {
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
+pub struct WiredFurniSelector {
+    pub def: SelectorDefinition
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 0)]
 pub struct WiredFurniTrigger {
     pub def: TriggerDefinition
 }
@@ -1919,200 +2263,6 @@ pub struct MaintenanceStatus {
     pub is_in_maintenance: bool,
     pub minutes_until_maintenance: i32,
     pub duration: Option<bool>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CallForHelpDisabledNotify {
-    pub info_url: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CallForHelpPendingCallsDeleted {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CallForHelpPendingCalls {
-    pub calls: Vec<CallForHelpPendingCall>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CallForHelpReply {
-    pub message: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CallForHelpResult {
-    pub result_type: i32,
-    pub message_text: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ChatReviewSessionDetached {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ChatReviewSessionOfferedToGuide {
-    pub acceptance_timeout: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ChatReviewSessionResults {
-    pub winning_vote_code: i32,
-    pub own_vote_code: i32,
-    pub final_status: Vec<i32>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ChatReviewSessionStarted {
-    pub voting_timeout: i32,
-    pub chat_record: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct ChatReviewSessionVotingStatus {
-    pub status: Vec<i32>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideOnDutyStatus {
-    pub on_duty: bool,
-    pub guides_on_duty: i32,
-    pub helpers_on_duty: i32,
-    pub guardians_on_duty: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideReportingStatus {
-    pub status_code: i32,
-    pub pending_ticket: Option<PendingGuideTicket>
-}
-
-impl PacketVariable for GuideReportingStatus {
-    fn from_packet(bytes: Vec<u8>) -> (Self, usize) where Self: Sized {
-        let mut packet = HPacket::from_header_id_and_bytes(0, bytes);
-
-        let status_code = packet.read();
-
-        (Self {
-            status_code,
-            pending_ticket: if status_code == 1 { packet.read() } else { None }
-        }, packet.read_index - 6)
-    }
-
-    fn to_packet(&self) -> Vec<u8> {
-        if self.status_code == 1 && self.pending_ticket.is_some() {
-            (self.status_code, self.pending_ticket.clone()).to_packet()
-        } else if self.status_code == 1 {
-            2i32.to_packet()
-        } else {
-            self.status_code.to_packet()
-        }
-    }
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionAttached {
-    pub as_guide: bool,
-    pub help_request_type: i32,
-    pub help_request_description: String,
-    pub role_specific_wait_time: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionDetached {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionEnded {
-    pub end_reason: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionError {
-    pub error_code: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionInvitedToGuideRoom {
-    pub room_id: LegacyId,
-    pub room_name: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionMessage {
-    pub chat_message: String,
-    pub sender_id: LegacyId
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionPartnerIsTyping {
-    pub is_typing: bool
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionRequesterRoom {
-    pub requester_room_id: LegacyId
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideSessionStarted {
-    pub requester_user_id: LegacyId,
-    pub requester_name: String,
-    pub requester_figure: String,
-    pub guide_user_id: LegacyId,
-    pub guide_name: String,
-    pub guide_figure: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideTicketCreationResult {
-    pub localization_code: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GuideTicketResolution {
-    pub localization_code: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IssueCloseNotification {
-    pub close_reason: i32,
-    pub message_text: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct QuizData {
-    pub quiz_code: String,
-    pub question_ids: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct QuizResults {
-    pub quiz_code: String,
-    pub question_ids_for_wrong_answers: i32
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -2845,37 +2995,6 @@ pub struct ThumbnailStatus {
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
-pub struct FurniListAddOrUpdate {
-    pub furni: FurniData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct FurniList {
-    pub total_fragments: i32,
-    pub fragment_no: i32,
-    pub furni_fragment: Vec<FurniData>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct FurniListInvalidate {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct FurniListRemove {
-    pub strip_id: LegacyId
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct PostItPlaced {
-    pub id: LegacyId,
-    pub items_left: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
 pub struct AvatarEffectActivated {
     pub effect_type: i32,
     pub duration: i32,
@@ -3177,12 +3296,6 @@ pub struct FriendFurniStartConfirmation {
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
 #[to(direction = 0)]
-pub struct PromoArticles {
-    pub articles: Vec<PromoArticleData>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
 pub struct CfhSanction {
     pub issue_id: LegacyId,
     pub account_id: LegacyId,
@@ -3326,91 +3439,6 @@ pub struct Game2FullGameStatus {
 #[to(direction = 0)]
 pub struct Game2GameStatus {
     pub status: GameStatusData
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct AuthenticationOK {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct CompleteDiffieHandshake {
-    pub encrypted_public_key: String,
-    pub server_client_encryption: Option<bool>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct DisconnectReason {
-    pub reason: Option<i32>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct GenericError {
-    pub error_code: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IdentityAccounts {
-    pub accounts: HashMap<i32, String>
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct InitDiffieHandshake {
-    pub encrypted_prime: String,
-    pub encrypted_generator: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct IsFirstLoginOfDay {
-    pub is_first_login_of_day: bool
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct NoobnessLevel {
-    pub noobness_level: i32
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct Ping {}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UniqueMachineID {
-    pub machine_id: String
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UserObject {
-    pub id: LegacyId,
-    pub name: String,
-    pub figure: String,
-    pub sex: String,
-    pub custom_data: String,
-    pub real_name: String,
-    pub direct_mail: bool,
-    pub respect_total: i32,
-    pub respect_left: i32,
-    pub pet_respect_left: i32,
-    pub stream_publishing_allowed: bool,
-    pub last_access_date: String,
-    pub name_change_allowed: bool,
-    pub account_safety_locked: bool
-}
-
-#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
-#[to(direction = 0)]
-pub struct UserRights {
-    pub club_level: i32,
-    pub security_level: i32,
-    pub is_ambassador: bool
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]

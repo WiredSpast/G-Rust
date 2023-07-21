@@ -523,8 +523,8 @@ pub struct UpdateAction {
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
     pub action_delay: i32,
-    pub _unused1: i32,
-    pub _unused2: i32
+    pub furni_sources: Vec<LegacyId>,
+    pub user_sources: Vec<LegacyId>
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -534,8 +534,8 @@ pub struct UpdateAddon {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub _unused1: i32,
-    pub _unused2: i32
+    pub furni_sources: Vec<LegacyId>,
+    pub user_sources: Vec<LegacyId>
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -545,9 +545,22 @@ pub struct UpdateCondition {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub _unused1: i32,
-    pub _unused2: i32,
-    pub _unused3: i32
+    pub quantifier: i32,
+    pub furni_sources: Vec<LegacyId>,
+    pub user_sources: Vec<LegacyId>
+}
+
+#[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
+#[to(direction = 1)]
+pub struct UpdateSelector {
+    pub id: LegacyId,
+    pub int_params: Vec<i32>,
+    pub string_param: String,
+    pub stuff_ids: Vec<LegacyId>,
+    pub filter_field: bool,
+    pub inverse_field: bool,
+    pub furni_sources: Vec<LegacyId>,
+    pub user_sources: Vec<LegacyId>
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]
@@ -557,8 +570,8 @@ pub struct UpdateTrigger {
     pub int_params: Vec<i32>,
     pub string_param: String,
     pub stuff_ids: Vec<LegacyId>,
-    pub _unused1: i32,
-    pub _unused2: i32
+    pub furni_sources: Vec<LegacyId>,
+    pub user_sources: Vec<LegacyId>
 }
 
 #[derive(BaseParser, Clone, Debug, Default, PacketVariable, PartialEq)]

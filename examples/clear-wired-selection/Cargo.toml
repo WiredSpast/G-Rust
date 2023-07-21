@@ -1,0 +1,11 @@
+[package]
+name = "clear-wired-selection"
+version = "0.1.0"
+edition = "2021"
+authors = ["WiredSpast"]
+description = "Clear the selected furni in the currently open wired"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+g-rust = { path = "../../.", version = "0.0.1-beta.5" }
