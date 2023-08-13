@@ -64,8 +64,8 @@ pub struct Extension<W: Debug + Default> {
     on_host_info_update: Vec<fn(&mut Self, HostInfo)>,
     on_socket_disconnect: Vec<fn(&mut Self)>,
 
-    intercepts_by_id: HashMap<HDirection, HashMap<i16, Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send>>>>,
-    intercepts_by_name: HashMap<HDirection, HashMap<String, Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send>>>>,
+    intercepts_by_id: HashMap<HDirection, HashMap<i16, Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send + Sync>>>>,
+    intercepts_by_name: HashMap<HDirection, HashMap<String, Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send + Sync>>>>,
 
     flag_callback: Option<fn(&mut Self, Vec<String>)>
 }
@@ -259,7 +259,7 @@ impl <W: Debug + Default + 'static> Extension<W> {
                 .collect()
         } else { Vec::new() };
 
-        let mut matching_listeners_by_id: Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send>> = Vec::new();
+        let mut matching_listeners_by_id: Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send + Sync>> = Vec::new();
         let header_id = msg.get_packet().header_id();
         let intercepts_by_id = self.intercepts_by_id.get_mut(&msg.get_destination());
         if intercepts_by_id.is_some() {
@@ -275,7 +275,7 @@ impl <W: Debug + Default + 'static> Extension<W> {
             self.intercept_raw(msg.get_destination(), header_id as i32, listener);
         }
 
-        let mut matching_listeners_by_name: Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send>> = Vec::new();
+        let mut matching_listeners_by_name: Vec<Box<dyn Fn(&mut Self, &mut HMessage) + Send + Sync>> = Vec::new();
         let intercepts_by_name = self.intercepts_by_name.get_mut(&msg.get_destination());
         let mut name = String::default();
         if intercepts_by_name.is_some() {
@@ -361,7 +361,7 @@ impl <W: Debug + Default + 'static> Extension<W> {
         }
     }
 
-    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Self, &mut HMessage) + Send + 'static) {
+    pub fn intercept_raw<I: InterceptIndicator>(&mut self, direction: HDirection, indicator: I, listener: impl Fn(&mut Self, &mut HMessage) + Send + Sync + 'static) {
         let intercepts = if I::is_raw_habbo_header_id() {
             self.intercepts_by_id
                 .entry(direction)
