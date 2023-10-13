@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use crate::extension::parsers::stuffdata::StuffData;
 use crate::protocol::hpacket::HPacket;
-use crate::protocol::vars::legacy::{LegacyId, LegacyLength, LegacyDouble};
+use crate::protocol::vars::legacy::{LegacyId, LegacyLength, LegacyDouble, LegacyStringId};
 use crate::protocol::vars::packetvariable::PacketVariable;
 
 // WIN63-202307010021-160474147
@@ -1116,7 +1116,7 @@ pub struct HeightMapTileUpdate {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct WallItem {
-    pub id: LegacyId,
+    pub id: LegacyStringId,
     pub type_id: i32,
     pub location: String,
     pub data_str: String,
@@ -1159,7 +1159,7 @@ pub struct FloorItem {
     pub data: StuffData,
     pub expiry_time: i32,
     pub usage_policy: i32,
-    pub owner_id: i32,
+    pub owner_id: LegacyId,
     pub static_class: String,
     pub owner_name: Option<String>
 }
